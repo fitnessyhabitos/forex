@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOREXRISK PRO • HYBRID EDITION</title>
+    <title>FOREX DATA PRO • Professional Trading Platform</title>
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -269,13 +269,58 @@
             box-shadow: 0 0 10px var(--neon-red);
         }
 
-        .loading-phase {
+        input, select {
             background: var(--dark-elevated);
-            border: 1px solid var(--neon-cyan);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            font-family: 'Orbitron', sans-serif;
+            border: 1px solid var(--border-dark);
+            color: var(--text-white);
+            padding: 0.75rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
             font-size: 0.875rem;
+            color: var(--text-gray);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .alarm-item {
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .alarm-item:hover {
+            border-color: var(--neon-cyan);
+        }
+
+        .alarm-active {
+            border-left: 3px solid var(--neon-green);
+        }
+
+        .alarm-triggered {
+            background: rgba(255, 0, 64, 0.1);
+            border-color: var(--neon-red);
+            animation: neonPulse 1s infinite;
         }
 
         @media (max-width: 768px) {
@@ -305,9 +350,35 @@
             { symbol: 'XAU/USD', finnhubSymbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2 },
         ];
 
+        // ==================== LOCALSTORAGE ====================
+
+        const loadProfile = () => {
+            const saved = localStorage.getItem('forexDataProProfile');
+            return saved ? JSON.parse(saved) : {
+                name: '',
+                email: '',
+                experience: 'beginner',
+                riskTolerance: 'medium',
+                preferredPairs: [],
+                minScore: 60
+            };
+        };
+
+        const saveProfile = (profile) => {
+            localStorage.setItem('forexDataProProfile', JSON.stringify(profile));
+        };
+
+        const loadAlarms = () => {
+            const saved = localStorage.getItem('forexDataProAlarms');
+            return saved ? JSON.parse(saved) : [];
+        };
+
+        const saveAlarms = (alarms) => {
+            localStorage.setItem('forexDataProAlarms', JSON.stringify(alarms));
+        };
+
         // ==================== FUNCIONES API ====================
 
-        // Obtener precio de apertura del día desde Twelve Data
         const fetchDailyOpen = async (symbol) => {
             try {
                 const url = `${TWELVE_DATA_BASE}/time_series?symbol=${symbol}&interval=1day&outputsize=1&apikey=${TWELVE_DATA_API_KEY}`;
@@ -387,7 +458,6 @@
             const { price, dailyOpen, dailyHigh, dailyLow, volatility = 50 } = pair;
             let score = 0;
 
-            // 1. Momentum del día (40 puntos)
             const dayChange = ((price - dailyOpen) / dailyOpen) * 100;
             const absDayChange = Math.abs(dayChange);
             if (absDayChange > 0.5) score += 40;
@@ -395,7 +465,6 @@
             else if (absDayChange > 0.1) score += 20;
             else score += 10;
 
-            // 2. Posición en rango del día (30 puntos)
             const currentHigh = Math.max(dailyHigh || price, price);
             const currentLow = Math.min(dailyLow || price, price);
             if (currentHigh !== currentLow) {
@@ -407,12 +476,10 @@
                 score += 15;
             }
 
-            // 3. Volatilidad (20 puntos)
             if (volatility > 40 && volatility < 100) score += 20;
             else if (volatility > 20 && volatility < 150) score += 15;
             else score += 10;
 
-            // 4. Tendencia (10 puntos)
             if (priceHistory && priceHistory.length >= 10) {
                 const recentPrices = priceHistory.slice(-10);
                 const ma5 = calculateMA(recentPrices, 5);
@@ -517,25 +584,38 @@
             ];
         };
 
-        // ==================== COMPONENTES ====================
+        // ==================== ICONOS ====================
 
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
         const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
+        const UserIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const BellIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
 
-        const Header = ({ connected, tickCount, lastUpdate, loadingPhase }) => (
+        // ==================== COMPONENTES ====================
+
+        const Header = ({ connected, tickCount, lastUpdate, loadingPhase, onOpenProfile, onOpenAlarms }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
                 <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
+                            <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREX DATA PRO</h1>
                             <span className="live-badge">HYBRID</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
-                            <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
-                            <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
-                                {connected ? `🔴 EN VIVO • ${tickCount} ticks` : loadingPhase || '⚠️ CONECTANDO...'}
-                            </span>
+
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <button onClick={onOpenProfile} className="btn btn-small" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <UserIcon /> PERFIL
+                            </button>
+                            <button onClick={onOpenAlarms} className="btn btn-small" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <BellIcon /> ALARMAS
+                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
+                                <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
+                                <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
+                                    {connected ? `🔴 ${tickCount} ticks` : loadingPhase || '⚠️ CONECTANDO...'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
@@ -545,7 +625,215 @@
             </header>
         );
 
-        const PairCard = ({ pair, onAnalyze, isBestOpportunity, priceHistory }) => {
+        const ProfileModal = ({ onClose, profile, onSave }) => {
+            const [formData, setFormData] = useState(profile);
+
+            const handleSave = () => {
+                onSave(formData);
+                onClose();
+            };
+
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+                        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                            <div className="card" style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <h2 className="neon-text">CONFIGURAR PERFIL</h2>
+                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Nombre</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        placeholder="Tu nombre"
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Email</label>
+                                    <input 
+                                        type="email" 
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                        placeholder="tu@email.com"
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Experiencia en Trading</label>
+                                    <select 
+                                        value={formData.experience}
+                                        onChange={(e) => setFormData({...formData, experience: e.target.value})}
+                                    >
+                                        <option value="beginner">Principiante (0-1 año)</option>
+                                        <option value="intermediate">Intermedio (1-3 años)</option>
+                                        <option value="advanced">Avanzado (3-5 años)</option>
+                                        <option value="expert">Experto (5+ años)</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Tolerancia al Riesgo</label>
+                                    <select 
+                                        value={formData.riskTolerance}
+                                        onChange={(e) => setFormData({...formData, riskTolerance: e.target.value})}
+                                    >
+                                        <option value="conservative">Conservador (R:R 1:1)</option>
+                                        <option value="medium">Moderado (R:R 1:2)</option>
+                                        <option value="aggressive">Agresivo (R:R 1:3+)</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Score Mínimo para Alertas</label>
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="100"
+                                        value={formData.minScore}
+                                        onChange={(e) => setFormData({...formData, minScore: parseInt(e.target.value)})}
+                                    />
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                        Solo se mostrarán oportunidades con score superior a este valor
+                                    </p>
+                                </div>
+
+                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%' }}>
+                                    💾 GUARDAR PERFIL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AlarmsModal = ({ onClose, alarms, onSave, pairs }) => {
+            const [alarmList, setAlarmList] = useState(alarms);
+            const [newAlarm, setNewAlarm] = useState({ pair: 'EURUSD', type: 'price', condition: 'above', value: '' });
+
+            const addAlarm = () => {
+                if (!newAlarm.value) return;
+                setAlarmList([...alarmList, { ...newAlarm, id: Date.now(), active: true, triggered: false }]);
+                setNewAlarm({ pair: 'EURUSD', type: 'price', condition: 'above', value: '' });
+            };
+
+            const deleteAlarm = (id) => {
+                setAlarmList(alarmList.filter(a => a.id !== id));
+            };
+
+            const toggleAlarm = (id) => {
+                setAlarmList(alarmList.map(a => a.id === id ? {...a, active: !a.active} : a));
+            };
+
+            const handleSave = () => {
+                onSave(alarmList);
+                onClose();
+            };
+
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <div className="card" style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <h2 className="neon-text">CONFIGURAR ALARMAS</h2>
+                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
+                                </div>
+
+                                <div style={{ background: 'var(--dark-elevated)', padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border-dark)' }}>
+                                    <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>➕ NUEVA ALARMA</h3>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                                        <div>
+                                            <label>Par</label>
+                                            <select value={newAlarm.pair} onChange={(e) => setNewAlarm({...newAlarm, pair: e.target.value})}>
+                                                {PAIRS.map(p => <option key={p.displaySymbol} value={p.displaySymbol}>{p.displaySymbol}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label>Tipo</label>
+                                            <select value={newAlarm.type} onChange={(e) => setNewAlarm({...newAlarm, type: e.target.value})}>
+                                                <option value="price">Precio</option>
+                                                <option value="score">Score</option>
+                                                <option value="change">% Cambio</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label>Condición</label>
+                                            <select value={newAlarm.condition} onChange={(e) => setNewAlarm({...newAlarm, condition: e.target.value})}>
+                                                <option value="above">Por encima</option>
+                                                <option value="below">Por debajo</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label>Valor</label>
+                                            <input 
+                                                type="number" 
+                                                step="any"
+                                                value={newAlarm.value}
+                                                onChange={(e) => setNewAlarm({...newAlarm, value: e.target.value})}
+                                                placeholder="1.1650"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button onClick={addAlarm} className="btn btn-primary" style={{ width: '100%' }}>
+                                        ➕ AÑADIR ALARMA
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>🔔 ALARMAS ACTIVAS ({alarmList.length})</h3>
+
+                                    {alarmList.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>
+                                            No hay alarmas configuradas
+                                        </div>
+                                    ) : (
+                                        alarmList.map(alarm => (
+                                            <div key={alarm.id} className={`alarm-item ${alarm.active ? 'alarm-active' : ''} ${alarm.triggered ? 'alarm-triggered' : ''}`}>
+                                                <div>
+                                                    <strong style={{ color: 'var(--neon-cyan)' }}>{alarm.pair}</strong>
+                                                    {' '}
+                                                    <span style={{ color: 'var(--text-gray)' }}>
+                                                        {alarm.type === 'price' ? 'Precio' : alarm.type === 'score' ? 'Score' : '% Cambio'}
+                                                        {' '}{alarm.condition === 'above' ? '>' : '<'}{' '}
+                                                        {alarm.value}
+                                                    </span>
+                                                    {alarm.triggered && <span style={{ color: 'var(--neon-red)', marginLeft: '1rem' }}>⚠️ ACTIVADA</span>}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button onClick={() => toggleAlarm(alarm.id)} className="btn btn-small">
+                                                        {alarm.active ? 'Desactivar' : 'Activar'}
+                                                    </button>
+                                                    <button onClick={() => deleteAlarm(alarm.id)} className="btn btn-small" style={{ borderColor: 'var(--neon-red)', color: 'var(--neon-red)' }}>
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }}>
+                                    💾 GUARDAR ALARMAS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PairCard = ({ pair, onAnalyze, isBestOpportunity, priceHistory, profile }) => {
             const { displaySymbol, name, price, dailyOpen, dailyHigh, dailyLow, decimals } = pair;
 
             if (!price || !dailyOpen) {
@@ -553,7 +841,7 @@
                     <div className="card">
                         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-gray)' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-                            <p>Cargando datos del mercado...</p>
+                            <p>Cargando datos...</p>
                         </div>
                     </div>
                 );
@@ -563,6 +851,11 @@
             const changeAbs = (price - dailyOpen).toFixed(decimals);
             const changeColor = parseFloat(change) >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
             const score = calculateOpportunityScore(pair, priceHistory);
+
+            // Filtrar por score mínimo del perfil
+            if (score < profile.minScore) {
+                return null;
+            }
 
             return (
                 <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
@@ -598,10 +891,6 @@
                         <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
                             Apertura: {dailyOpen.toFixed(decimals)} • Alto: {dailyHigh ? dailyHigh.toFixed(decimals) : '--'} • Bajo: {dailyLow ? dailyLow.toFixed(decimals) : '--'}
                         </div>
-
-                        <p style={{ fontSize: '0.65rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>
-                            ⚡ Streaming híbrido en vivo
-                        </p>
                     </div>
 
                     <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
@@ -655,7 +944,7 @@
             }, [priceHistory]);
 
             if (!priceHistory || priceHistory.length < 10) {
-                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando ticks... ({priceHistory?.length || 0}/10)</div>;
+                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando datos... ({priceHistory?.length || 0}/10)</div>;
             }
 
             return <div className="chart-container"><canvas ref={chartRef}></canvas></div>;
@@ -697,7 +986,7 @@
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
                                     <div className="card">
                                         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <BarChartIcon /> GRÁFICO EN TIEMPO REAL
+                                            <BarChartIcon /> GRÁFICO TIEMPO REAL
                                         </h3>
                                         <CandlestickChart priceHistory={priceHistory} pair={pair} />
                                     </div>
@@ -721,7 +1010,7 @@
                                                 <span style={{ fontFamily: 'Orbitron' }}>{analysis.macd.histogram > 0 ? '↑' : '↓'}</span>
                                             </div>
                                             <div style={{ fontSize: '0.875rem' }}>
-                                                <div>Histograma: {analysis.macd.histogram.toFixed(6)}</div>
+                                                Histograma: {analysis.macd.histogram.toFixed(6)}
                                             </div>
                                         </div>
 
@@ -783,7 +1072,7 @@
                                     </div>
 
                                     <div className="card" style={{ gridColumn: 'span 2' }}>
-                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES POR RATIO R:R</h3>
+                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES R:R</h3>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                                             {ratios.map((ratio, i) => (
@@ -810,15 +1099,6 @@
                                                 </div>
                                             ))}
                                         </div>
-
-                                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', fontSize: '0.875rem' }}>
-                                            <strong>💡 Interpretación:</strong>
-                                            <div style={{ marginTop: '0.5rem', color: 'var(--text-gray)' }}>
-                                                • <strong style={{ color: 'var(--neon-green)' }}>&gt;70%:</strong> Alta probabilidad<br/>
-                                                • <strong style={{ color: 'var(--neon-cyan)' }}>50-70%:</strong> Probabilidad moderada<br/>
-                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -838,13 +1118,81 @@
             const [tickCount, setTickCount] = useState(0);
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
             const [loadingPhase, setLoadingPhase] = useState('Inicializando...');
+            const [showProfile, setShowProfile] = useState(false);
+            const [showAlarms, setShowAlarms] = useState(false);
+            const [profile, setProfile] = useState(loadProfile());
+            const [alarms, setAlarms] = useState(loadAlarms());
             const wsRef = useRef(null);
 
-            // FASE 1: Cargar precios de apertura desde Twelve Data
+            // Guardar perfil
+            const handleSaveProfile = (newProfile) => {
+                setProfile(newProfile);
+                saveProfile(newProfile);
+            };
+
+            // Guardar alarmas
+            const handleSaveAlarms = (newAlarms) => {
+                setAlarms(newAlarms);
+                saveAlarms(newAlarms);
+            };
+
+            // Verificar alarmas
+            useEffect(() => {
+                pairs.forEach(pair => {
+                    if (!pair.price) return;
+
+                    const score = calculateOpportunityScore(pair, priceHistories[pair.displaySymbol]);
+                    const change = pair.dailyOpen ? ((pair.price - pair.dailyOpen) / pair.dailyOpen * 100) : 0;
+
+                    alarms.forEach(alarm => {
+                        if (!alarm.active || alarm.triggered) return;
+                        if (alarm.pair !== pair.displaySymbol) return;
+
+                        let shouldTrigger = false;
+
+                        if (alarm.type === 'price') {
+                            shouldTrigger = alarm.condition === 'above' 
+                                ? pair.price >= parseFloat(alarm.value)
+                                : pair.price <= parseFloat(alarm.value);
+                        } else if (alarm.type === 'score') {
+                            shouldTrigger = alarm.condition === 'above'
+                                ? score >= parseFloat(alarm.value)
+                                : score <= parseFloat(alarm.value);
+                        } else if (alarm.type === 'change') {
+                            shouldTrigger = alarm.condition === 'above'
+                                ? change >= parseFloat(alarm.value)
+                                : change <= parseFloat(alarm.value);
+                        }
+
+                        if (shouldTrigger) {
+                            // Marcar como activada
+                            setAlarms(prev => prev.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
+                            saveAlarms(alarms.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
+
+                            // Notificación
+                            if (Notification.permission === 'granted') {
+                                new Notification('🚨 FOREX DATA PRO - Alarma Activada', {
+                                    body: `${alarm.pair}: ${alarm.type} ${alarm.condition === 'above' ? '>' : '<'} ${alarm.value}`,
+                                    icon: '/favicon.ico'
+                                });
+                            }
+                        }
+                    });
+                });
+            }, [pairs, alarms, priceHistories]);
+
+            // Solicitar permisos de notificación
+            useEffect(() => {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }, []);
+
+            // FASE 1: Cargar precios de apertura
             useEffect(() => {
                 const loadDailyData = async () => {
-                    console.log('📊 FASE 1: Cargando precios de apertura del día (Twelve Data)');
-                    setLoadingPhase('📊 Cargando apertura del día...');
+                    console.log('📊 FASE 1: Cargando precios de apertura (Twelve Data)');
+                    setLoadingPhase('📊 Cargando apertura...');
 
                     for (const pairConfig of PAIRS) {
                         const dailyData = await fetchDailyOpen(pairConfig.symbol);
@@ -854,32 +1202,31 @@
                                     ? { ...p, dailyOpen: dailyData.open, dailyHigh: dailyData.high, dailyLow: dailyData.low, price: dailyData.close }
                                     : p
                             ));
-                            console.log(`✅ ${pairConfig.displaySymbol}: Apertura=${dailyData.open}, Actual=${dailyData.close}`);
+                            console.log(`✅ ${pairConfig.displaySymbol}: Open=${dailyData.open}`);
                         }
                     }
 
-                    console.log('✅ FASE 1 COMPLETADA - Precios de apertura cargados');
-                    setLoadingPhase('⚡ Conectando streaming...');
+                    console.log('✅ FASE 1 COMPLETADA');
+                    setLoadingPhase('⚡ Conectando...');
                 };
 
                 loadDailyData();
             }, []);
 
-            // FASE 2: Conectar WebSocket Finnhub para tiempo real
+            // FASE 2: WebSocket
             useEffect(() => {
                 const timer = setTimeout(() => {
-                    console.log('🚀 FASE 2: Iniciando WebSocket streaming (Finnhub)');
+                    console.log('🚀 FASE 2: WebSocket (Finnhub)');
                     const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
                     wsRef.current = socket;
 
                     socket.addEventListener('open', () => {
-                        console.log('✅ WebSocket CONECTADO - Streaming en tiempo real activo');
+                        console.log('✅ WebSocket CONECTADO');
                         setConnected(true);
                         setLoadingPhase(null);
 
                         PAIRS.forEach(pair => {
                             socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.finnhubSymbol }));
-                            console.log('📡 Streaming activado:', pair.finnhubSymbol);
                         });
                     });
 
@@ -896,7 +1243,6 @@
 
                                 setPairs(prev => prev.map(p => {
                                     if (p.symbol === pairConfig.symbol) {
-                                        // Actualizar high/low en tiempo real
                                         const newHigh = p.dailyHigh ? Math.max(p.dailyHigh, price) : price;
                                         const newLow = p.dailyLow ? Math.min(p.dailyLow, price) : price;
 
@@ -931,12 +1277,11 @@
                     socket.addEventListener('error', (error) => {
                         console.error('⚠️ Error WebSocket:', error);
                     });
-                }, 2000); // Esperar 2s después de cargar precios de apertura
+                }, 2000);
 
                 return () => {
                     clearTimeout(timer);
                     if (wsRef.current) {
-                        console.log('🔌 Cerrando WebSocket');
                         PAIRS.forEach(pair => {
                             wsRef.current.send(JSON.stringify({ type: 'unsubscribe', symbol: pair.finnhubSymbol }));
                         });
@@ -953,17 +1298,18 @@
 
             return (
                 <div>
-                    <Header connected={connected} tickCount={tickCount} lastUpdate={lastUpdate} loadingPhase={loadingPhase} />
+                    <Header 
+                        connected={connected} 
+                        tickCount={tickCount} 
+                        lastUpdate={lastUpdate} 
+                        loadingPhase={loadingPhase}
+                        onOpenProfile={() => setShowProfile(true)}
+                        onOpenAlarms={() => setShowAlarms(true)}
+                    />
 
                     <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-                        {loadingPhase && (
-                            <div className="loading-phase" style={{ textAlign: 'center' }}>
-                                {loadingPhase}
-                            </div>
-                        )}
-
                         <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ SISTEMA HÍBRIDO EN TIEMPO REAL</h2>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING HÍBRIDO EN TIEMPO REAL</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
                                 🔴 % desde apertura real del mercado • Score dinámico • Análisis técnico profesional
                             </p>
@@ -977,6 +1323,7 @@
                                     priceHistory={priceHistories[pair.displaySymbol]}
                                     onAnalyze={setSelectedPair}
                                     isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && pair.price && pair.dailyOpen}
+                                    profile={profile}
                                 />
                             ))}
                         </div>
@@ -987,6 +1334,23 @@
                             pair={selectedPair} 
                             onClose={() => setSelectedPair(null)}
                             priceHistory={priceHistories[selectedPair.displaySymbol] || []}
+                        />
+                    )}
+
+                    {showProfile && (
+                        <ProfileModal 
+                            onClose={() => setShowProfile(false)}
+                            profile={profile}
+                            onSave={handleSaveProfile}
+                        />
+                    )}
+
+                    {showAlarms && (
+                        <AlarmsModal 
+                            onClose={() => setShowAlarms(false)}
+                            alarms={alarms}
+                            onSave={handleSaveAlarms}
+                            pairs={PAIRS}
                         />
                     )}
                 </div>
