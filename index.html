@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOREXRISK PRO • LIVE STREAMING</title>
+    <title>FOREXRISK PRO • HYBRID EDITION</title>
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -269,6 +269,15 @@
             box-shadow: 0 0 10px var(--neon-red);
         }
 
+        .loading-phase {
+            background: var(--dark-elevated);
+            border: 1px solid var(--neon-cyan);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.875rem;
+        }
+
         @media (max-width: 768px) {
             .best-opportunity { margin-top: 3rem; }
         }
@@ -282,17 +291,44 @@
 
         // ==================== CONFIGURACIÓN ====================
 
+        const TWELVE_DATA_API_KEY = '04eec7507ab745e18e787977413c2649';
+        const TWELVE_DATA_BASE = 'https://api.twelvedata.com';
+
         const FINNHUB_API_KEY = 'd5n740hr01qh5ppc15r0d5n740hr01qh5ppc15rg';
         const FINNHUB_WS = 'wss://ws.finnhub.io';
-        const FINNHUB_REST = 'https://finnhub.io/api/v1';
 
         const PAIRS = [
-            { symbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5 },
-            { symbol: 'OANDA:GBP_USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar', decimals: 5 },
-            { symbol: 'OANDA:USD_JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen', decimals: 3 },
-            { symbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3 },
-            { symbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2 },
+            { symbol: 'EUR/USD', finnhubSymbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5 },
+            { symbol: 'GBP/USD', finnhubSymbol: 'OANDA:GBP_USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar', decimals: 5 },
+            { symbol: 'USD/JPY', finnhubSymbol: 'OANDA:USD_JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen', decimals: 3 },
+            { symbol: 'EUR/JPY', finnhubSymbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3 },
+            { symbol: 'XAU/USD', finnhubSymbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2 },
         ];
+
+        // ==================== FUNCIONES API ====================
+
+        // Obtener precio de apertura del día desde Twelve Data
+        const fetchDailyOpen = async (symbol) => {
+            try {
+                const url = `${TWELVE_DATA_BASE}/time_series?symbol=${symbol}&interval=1day&outputsize=1&apikey=${TWELVE_DATA_API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.values && data.values.length > 0) {
+                    return {
+                        open: parseFloat(data.values[0].open),
+                        high: parseFloat(data.values[0].high),
+                        low: parseFloat(data.values[0].low),
+                        close: parseFloat(data.values[0].close),
+                        datetime: data.values[0].datetime
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error(`Error fetching daily open for ${symbol}:`, error);
+                return null;
+            }
+        };
 
         // ==================== FUNCIONES TÉCNICAS ====================
 
@@ -345,11 +381,59 @@
             return slice.reduce((a, b) => a + b, 0) / period;
         };
 
+        const calculateOpportunityScore = (pair, priceHistory) => {
+            if (!pair.price || !pair.dailyOpen) return 0;
+
+            const { price, dailyOpen, dailyHigh, dailyLow, volatility = 50 } = pair;
+            let score = 0;
+
+            // 1. Momentum del día (40 puntos)
+            const dayChange = ((price - dailyOpen) / dailyOpen) * 100;
+            const absDayChange = Math.abs(dayChange);
+            if (absDayChange > 0.5) score += 40;
+            else if (absDayChange > 0.3) score += 30;
+            else if (absDayChange > 0.1) score += 20;
+            else score += 10;
+
+            // 2. Posición en rango del día (30 puntos)
+            const currentHigh = Math.max(dailyHigh || price, price);
+            const currentLow = Math.min(dailyLow || price, price);
+            if (currentHigh !== currentLow) {
+                const rangePosition = (price - currentLow) / (currentHigh - currentLow);
+                if (rangePosition > 0.8 || rangePosition < 0.2) score += 30;
+                else if (rangePosition > 0.6 || rangePosition < 0.4) score += 20;
+                else score += 10;
+            } else {
+                score += 15;
+            }
+
+            // 3. Volatilidad (20 puntos)
+            if (volatility > 40 && volatility < 100) score += 20;
+            else if (volatility > 20 && volatility < 150) score += 15;
+            else score += 10;
+
+            // 4. Tendencia (10 puntos)
+            if (priceHistory && priceHistory.length >= 10) {
+                const recentPrices = priceHistory.slice(-10);
+                const ma5 = calculateMA(recentPrices, 5);
+                const ma10 = calculateMA(recentPrices, 10);
+                if ((price > ma5 && ma5 > ma10) || (price < ma5 && ma5 < ma10)) {
+                    score += 10;
+                } else {
+                    score += 5;
+                }
+            } else {
+                score += 5;
+            }
+
+            return Math.min(100, Math.round(score));
+        };
+
         const analyzeSignals = (pair, priceHistory) => {
-            if (!priceHistory || priceHistory.length < 30) {
+            if (!priceHistory || priceHistory.length < 15) {
                 return {
                     signal: 'NEUTRAL', confidence: 0,
-                    reasons: ['Acumulando datos (necesita 30+ ticks)'],
+                    reasons: ['Acumulando datos (necesita 15+ ticks)'],
                     entry: pair.price, stopLoss: pair.price * 0.995, takeProfit: pair.price * 1.01,
                     rsi: 50, macd: { macd: 0, signal: 0, histogram: 0 },
                     bb: { upper: 0, middle: 0, lower: 0 }
@@ -360,14 +444,16 @@
             const macd = calculateMACD(priceHistory);
             const bb = calculateBollingerBands(priceHistory);
             const currentPrice = pair.price;
-            const ma50 = calculateMA(priceHistory, Math.min(50, priceHistory.length));
-            const ma200 = calculateMA(priceHistory, Math.min(200, priceHistory.length));
+            const ma10 = calculateMA(priceHistory, Math.min(10, priceHistory.length));
+            const ma20 = calculateMA(priceHistory, Math.min(20, priceHistory.length));
 
             let signal = 'NEUTRAL', confidence = 0;
             const reasons = [];
 
             if (rsi < 30) { confidence += 30; reasons.push(`RSI sobreventa (${rsi.toFixed(1)})`); signal = 'BUY'; }
             else if (rsi > 70) { confidence += 30; reasons.push(`RSI sobrecompra (${rsi.toFixed(1)})`); signal = 'SELL'; }
+            else if (rsi < 40) { confidence += 15; reasons.push('RSI tendencia compra'); if (signal === 'NEUTRAL') signal = 'BUY'; }
+            else if (rsi > 60) { confidence += 15; reasons.push('RSI tendencia venta'); if (signal === 'NEUTRAL') signal = 'SELL'; }
 
             if (macd.histogram > 0 && macd.macd > macd.signal) {
                 confidence += 25; reasons.push('MACD cruce alcista');
@@ -385,10 +471,10 @@
                 if (signal === 'NEUTRAL') signal = 'SELL';
             }
 
-            if (ma50 > ma200 && currentPrice > ma50) {
+            if (ma10 > ma20 && currentPrice > ma10) {
                 confidence += 15; reasons.push('Tendencia alcista');
                 if (signal === 'NEUTRAL') signal = 'BUY';
-            } else if (ma50 < ma200 && currentPrice < ma50) {
+            } else if (ma10 < ma20 && currentPrice < ma10) {
                 confidence += 15; reasons.push('Tendencia bajista');
                 if (signal === 'NEUTRAL') signal = 'SELL';
             }
@@ -410,7 +496,7 @@
                 takeProfit = currentPrice * 1.01;
             }
 
-            return { signal, confidence: Math.min(confidence, 100), reasons, rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma50, ma200 };
+            return { signal, confidence: Math.min(confidence, 100), reasons, rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma10, ma20 };
         };
 
         const calculateRatioProbabilities = (pair, analysis) => {
@@ -431,75 +517,52 @@
             ];
         };
 
-        // Obtener precio de apertura del día vía REST API
-        const fetchQuote = async (symbol) => {
-            try {
-                const url = `${FINNHUB_REST}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.o) {
-                    return {
-                        open: data.o,
-                        high: data.h,
-                        low: data.l,
-                        current: data.c,
-                        previousClose: data.pc
-                    };
-                }
-                return null;
-            } catch (error) {
-                console.error('Error fetching quote:', error);
-                return null;
-            }
-        };
-
         // ==================== COMPONENTES ====================
 
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
         const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
 
-        const Header = ({ connected, tickCount, lastUpdate }) => (
+        const Header = ({ connected, tickCount, lastUpdate, loadingPhase }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
                 <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
-                            <span className="live-badge">LIVE STREAM</span>
+                            <span className="live-badge">HYBRID</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
                             <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
                             <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
-                                {connected ? `🔴 EN VIVO • ${tickCount} ticks` : '⚠️ CONECTANDO...'}
+                                {connected ? `🔴 EN VIVO • ${tickCount} ticks` : loadingPhase || '⚠️ CONECTANDO...'}
                             </span>
                         </div>
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                        ⚡ WebSocket Finnhub • Actualización automática en tiempo real • {lastUpdate}
+                        ⚡ Twelve Data (apertura) + Finnhub (tiempo real) • {lastUpdate}
                     </div>
                 </div>
             </header>
         );
 
-        const PairCard = ({ pair, onAnalyze, isBestOpportunity }) => {
-            const { displaySymbol, name, price, open, high, low, decimals } = pair;
+        const PairCard = ({ pair, onAnalyze, isBestOpportunity, priceHistory }) => {
+            const { displaySymbol, name, price, dailyOpen, dailyHigh, dailyLow, decimals } = pair;
 
-            if (!price) {
+            if (!price || !dailyOpen) {
                 return (
                     <div className="card">
                         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-gray)' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-                            <p>Conectando stream...</p>
+                            <p>Cargando datos del mercado...</p>
                         </div>
                     </div>
                 );
             }
 
-            const change = open && open > 0 ? ((price - open) / open * 100).toFixed(2) : '0.00';
-            const changeAbs = open && open > 0 ? (price - open).toFixed(decimals) : '0.00';
+            const change = ((price - dailyOpen) / dailyOpen * 100).toFixed(2);
+            const changeAbs = (price - dailyOpen).toFixed(decimals);
             const changeColor = parseFloat(change) >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
-            const score = pair.score || 0;
+            const score = calculateOpportunityScore(pair, priceHistory);
 
             return (
                 <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
@@ -522,24 +585,22 @@
                             </p>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: changeColor, fontWeight: '700' }}>
                                 <span>{parseFloat(change) >= 0 ? '▲' : '▼'}</span>
                                 <span>{changeAbs}</span>
                             </div>
-                            <div style={{ padding: '0.25rem 0.5rem', background: changeColor, color: 'var(--dark-bg)', fontWeight: '900', fontSize: '0.75rem', fontFamily: 'Orbitron' }}>
+                            <div style={{ padding: '0.25rem 0.75rem', background: changeColor, color: 'var(--dark-bg)', fontWeight: '900', fontSize: '0.75rem', fontFamily: 'Orbitron' }}>
                                 {parseFloat(change) >= 0 ? '+' : ''}{change}%
                             </div>
                         </div>
 
-                        {open && open > 0 && (
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                Apertura: {open.toFixed(decimals)} • Alto: {high ? high.toFixed(decimals) : '--'} • Bajo: {low ? low.toFixed(decimals) : '--'}
-                            </div>
-                        )}
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
+                            Apertura: {dailyOpen.toFixed(decimals)} • Alto: {dailyHigh ? dailyHigh.toFixed(decimals) : '--'} • Bajo: {dailyLow ? dailyLow.toFixed(decimals) : '--'}
+                        </div>
 
                         <p style={{ fontSize: '0.65rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>
-                            ⚡ Auto-refresh • Streaming
+                            ⚡ Streaming híbrido en vivo
                         </p>
                     </div>
 
@@ -594,7 +655,7 @@
             }, [priceHistory]);
 
             if (!priceHistory || priceHistory.length < 10) {
-                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando ticks para gráfico... ({priceHistory?.length || 0}/10)</div>;
+                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando ticks... ({priceHistory?.length || 0}/10)</div>;
             }
 
             return <div className="chart-container"><canvas ref={chartRef}></canvas></div>;
@@ -650,7 +711,7 @@
                                                 <span style={{ fontFamily: 'Orbitron', fontSize: '1.25rem' }}>{analysis.rsi.toFixed(2)}</span>
                                             </div>
                                             <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                                                {analysis.rsi < 30 ? 'Sobreventa - Señal compra' : analysis.rsi > 70 ? 'Sobrecompra - Señal venta' : 'Zona neutral'}
+                                                {analysis.rsi < 30 ? 'Sobreventa' : analysis.rsi > 70 ? 'Sobrecompra' : 'Neutral'}
                                             </div>
                                         </div>
 
@@ -755,9 +816,7 @@
                                             <div style={{ marginTop: '0.5rem', color: 'var(--text-gray)' }}>
                                                 • <strong style={{ color: 'var(--neon-green)' }}>&gt;70%:</strong> Alta probabilidad<br/>
                                                 • <strong style={{ color: 'var(--neon-cyan)' }}>50-70%:</strong> Probabilidad moderada<br/>
-                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad<br/>
-                                                <br/>
-                                                <em>Basado en: Confianza {analysis.confidence}% • Volatilidad del par • Datos en tiempo real</em>
+                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad
                                             </div>
                                         </div>
                                     </div>
@@ -772,131 +831,141 @@
         // ==================== APP PRINCIPAL ====================
 
         const App = () => {
-            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, open: null, high: null, low: null, volatility: 50, score: 0 })));
+            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, dailyOpen: null, dailyHigh: null, dailyLow: null, volatility: 50 })));
             const [priceHistories, setPriceHistories] = useState({});
             const [selectedPair, setSelectedPair] = useState(null);
             const [connected, setConnected] = useState(false);
             const [tickCount, setTickCount] = useState(0);
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
+            const [loadingPhase, setLoadingPhase] = useState('Inicializando...');
             const wsRef = useRef(null);
 
-            // Cargar datos iniciales (open, high, low) via REST API
+            // FASE 1: Cargar precios de apertura desde Twelve Data
             useEffect(() => {
-                const loadInitialData = async () => {
-                    console.log('📊 Cargando datos iniciales de apertura...');
+                const loadDailyData = async () => {
+                    console.log('📊 FASE 1: Cargando precios de apertura del día (Twelve Data)');
+                    setLoadingPhase('📊 Cargando apertura del día...');
+
                     for (const pairConfig of PAIRS) {
-                        const quote = await fetchQuote(pairConfig.symbol);
-                        if (quote) {
+                        const dailyData = await fetchDailyOpen(pairConfig.symbol);
+                        if (dailyData) {
                             setPairs(prev => prev.map(p => 
                                 p.symbol === pairConfig.symbol 
-                                    ? { ...p, open: quote.open, high: quote.high, low: quote.low, price: quote.current }
+                                    ? { ...p, dailyOpen: dailyData.open, dailyHigh: dailyData.high, dailyLow: dailyData.low, price: dailyData.close }
                                     : p
                             ));
-                            console.log(`✅ ${pairConfig.displaySymbol}: Open=${quote.open}, Current=${quote.current}`);
+                            console.log(`✅ ${pairConfig.displaySymbol}: Apertura=${dailyData.open}, Actual=${dailyData.close}`);
                         }
                     }
+
+                    console.log('✅ FASE 1 COMPLETADA - Precios de apertura cargados');
+                    setLoadingPhase('⚡ Conectando streaming...');
                 };
 
-                loadInitialData();
+                loadDailyData();
             }, []);
 
-            // WebSocket para actualizaciones en tiempo real
+            // FASE 2: Conectar WebSocket Finnhub para tiempo real
             useEffect(() => {
-                console.log('🚀 Iniciando WebSocket streaming');
-                const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
-                wsRef.current = socket;
+                const timer = setTimeout(() => {
+                    console.log('🚀 FASE 2: Iniciando WebSocket streaming (Finnhub)');
+                    const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
+                    wsRef.current = socket;
 
-                socket.addEventListener('open', () => {
-                    console.log('✅ WebSocket CONECTADO');
-                    setConnected(true);
+                    socket.addEventListener('open', () => {
+                        console.log('✅ WebSocket CONECTADO - Streaming en tiempo real activo');
+                        setConnected(true);
+                        setLoadingPhase(null);
 
-                    PAIRS.forEach(pair => {
-                        socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.symbol }));
-                        console.log('📡 Streaming:', pair.symbol);
-                    });
-                });
-
-                socket.addEventListener('message', (event) => {
-                    const data = JSON.parse(event.data);
-
-                    if (data.type === 'trade') {
-                        data.data.forEach(trade => {
-                            const pairConfig = PAIRS.find(p => p.symbol === trade.s);
-                            if (!pairConfig) return;
-
-                            const price = trade.p;
-                            const timestamp = new Date(trade.t).toLocaleTimeString('es-ES');
-
-                            setPairs(prev => prev.map(p => {
-                                if (p.symbol === pairConfig.symbol) {
-                                    // Actualizar high/low en tiempo real
-                                    const newHigh = p.high ? Math.max(p.high, price) : price;
-                                    const newLow = p.low ? Math.min(p.low, price) : price;
-
-                                    const currentHistory = priceHistories[p.displaySymbol] || [];
-                                    const recentPrices = currentHistory.slice(-50);
-                                    const volatility = recentPrices.length > 10 
-                                        ? Math.round(((Math.max(...recentPrices) - Math.min(...recentPrices)) / price) * 10000)
-                                        : 50;
-
-                                    const allPrices = [...currentHistory, price];
-                                    const ma50 = calculateMA(allPrices, Math.min(50, allPrices.length));
-                                    const ma200 = calculateMA(allPrices, Math.min(200, allPrices.length));
-
-                                    let score = 0;
-                                    if ((price > ma200 && ma50 > ma200) || (price < ma200 && ma50 < ma200)) score += 40;
-                                    score += Math.min(30, Math.abs(ma50 - ma200) / ma200 * 1000);
-                                    score += volatility >= 40 && volatility <= 80 ? 20 : 10;
-                                    if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) score += 10;
-
-                                    return { ...p, price, high: newHigh, low: newLow, volatility, score: Math.min(100, Math.round(score)) };
-                                }
-                                return p;
-                            }));
-
-                            setPriceHistories(prev => {
-                                const history = [...(prev[pairConfig.displaySymbol] || []), price];
-                                if (history.length > 200) history.shift();
-                                return { ...prev, [pairConfig.displaySymbol]: history };
-                            });
-
-                            setTickCount(c => c + 1);
-                            setLastUpdate(timestamp);
+                        PAIRS.forEach(pair => {
+                            socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.finnhubSymbol }));
+                            console.log('📡 Streaming activado:', pair.finnhubSymbol);
                         });
-                    }
-                });
+                    });
 
-                socket.addEventListener('close', () => {
-                    console.log('❌ WebSocket desconectado');
-                    setConnected(false);
-                });
+                    socket.addEventListener('message', (event) => {
+                        const data = JSON.parse(event.data);
 
-                socket.addEventListener('error', (error) => {
-                    console.error('⚠️ Error WebSocket:', error);
-                });
+                        if (data.type === 'trade') {
+                            data.data.forEach(trade => {
+                                const pairConfig = PAIRS.find(p => p.finnhubSymbol === trade.s);
+                                if (!pairConfig) return;
+
+                                const price = trade.p;
+                                const timestamp = new Date(trade.t).toLocaleTimeString('es-ES');
+
+                                setPairs(prev => prev.map(p => {
+                                    if (p.symbol === pairConfig.symbol) {
+                                        // Actualizar high/low en tiempo real
+                                        const newHigh = p.dailyHigh ? Math.max(p.dailyHigh, price) : price;
+                                        const newLow = p.dailyLow ? Math.min(p.dailyLow, price) : price;
+
+                                        const currentHistory = priceHistories[p.displaySymbol] || [];
+                                        const recentPrices = currentHistory.slice(-50);
+                                        const volatility = recentPrices.length > 10 
+                                            ? Math.round(((Math.max(...recentPrices) - Math.min(...recentPrices)) / price) * 10000)
+                                            : 50;
+
+                                        return { ...p, price, dailyHigh: newHigh, dailyLow: newLow, volatility };
+                                    }
+                                    return p;
+                                }));
+
+                                setPriceHistories(prev => {
+                                    const history = [...(prev[pairConfig.displaySymbol] || []), price];
+                                    if (history.length > 200) history.shift();
+                                    return { ...prev, [pairConfig.displaySymbol]: history };
+                                });
+
+                                setTickCount(c => c + 1);
+                                setLastUpdate(timestamp);
+                            });
+                        }
+                    });
+
+                    socket.addEventListener('close', () => {
+                        console.log('❌ WebSocket desconectado');
+                        setConnected(false);
+                    });
+
+                    socket.addEventListener('error', (error) => {
+                        console.error('⚠️ Error WebSocket:', error);
+                    });
+                }, 2000); // Esperar 2s después de cargar precios de apertura
 
                 return () => {
-                    console.log('🔌 Cerrando WebSocket');
-                    PAIRS.forEach(pair => {
-                        socket.send(JSON.stringify({ type: 'unsubscribe', symbol: pair.symbol }));
-                    });
-                    socket.close();
+                    clearTimeout(timer);
+                    if (wsRef.current) {
+                        console.log('🔌 Cerrando WebSocket');
+                        PAIRS.forEach(pair => {
+                            wsRef.current.send(JSON.stringify({ type: 'unsubscribe', symbol: pair.finnhubSymbol }));
+                        });
+                        wsRef.current.close();
+                    }
                 };
             }, []);
 
-            const bestPair = pairs.filter(p => p.price).reduce((best, curr) => 
-                curr.score > best.score ? curr : best
-            , pairs[0] || {});
+            const bestPair = pairs.filter(p => p.price && p.dailyOpen).reduce((best, curr) => {
+                const currScore = calculateOpportunityScore(curr, priceHistories[curr.displaySymbol]);
+                const bestScore = calculateOpportunityScore(best, priceHistories[best.displaySymbol]);
+                return currScore > bestScore ? curr : best;
+            }, pairs[0] || {});
 
             return (
                 <div>
-                    <Header connected={connected} tickCount={tickCount} lastUpdate={lastUpdate} />
+                    <Header connected={connected} tickCount={tickCount} lastUpdate={lastUpdate} loadingPhase={loadingPhase} />
 
                     <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                        {loadingPhase && (
+                            <div className="loading-phase" style={{ textAlign: 'center' }}>
+                                {loadingPhase}
+                            </div>
+                        )}
+
                         <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING EN TIEMPO REAL</h2>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ SISTEMA HÍBRIDO EN TIEMPO REAL</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                🔴 % desde apertura • Alto/Bajo del día • WebSocket Finnhub • RSI, MACD, Bollinger en vivo
+                                🔴 % desde apertura real del mercado • Score dinámico • Análisis técnico profesional
                             </p>
                         </div>
 
@@ -905,8 +974,9 @@
                                 <PairCard
                                     key={pair.symbol}
                                     pair={pair}
+                                    priceHistory={priceHistories[pair.displaySymbol]}
                                     onAnalyze={setSelectedPair}
-                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && pair.price}
+                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && pair.price && pair.dailyOpen}
                                 />
                             ))}
                         </div>
