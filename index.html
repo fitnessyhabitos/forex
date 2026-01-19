@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOREXRISK PRO • DEBUG VERSION</title>
+    <title>FOREXRISK PRO • REAL-TIME EDITION</title>
 
     <!-- React y ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
         * {
             margin: 0;
@@ -19,95 +22,302 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --neon-red: #ff0040;
+            --neon-red-glow: rgba(255, 0, 64, 0.8);
+            --neon-green: #00ff00;
+            --neon-cyan: #00ffff;
+            --dark-bg: #000000;
+            --dark-surface: #0a0a0a;
+            --dark-elevated: #121212;
+            --border-dark: #1a1a1a;
+            --text-white: #ffffff;
+            --text-gray: #808080;
+        }
+
         body {
-            background: #000;
-            color: #fff;
+            background: var(--dark-bg);
+            color: var(--text-white);
             font-family: 'Rajdhani', sans-serif;
-            padding: 2rem;
+            overflow-x: hidden;
         }
 
-        .debug-container {
-            max-width: 1200px;
-            margin: 0 auto;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(255, 0, 64, 0.03), rgba(255, 0, 64, 0.03) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 1000;
+            animation: scan 8s linear infinite;
         }
 
-        h1 {
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        h1, h2, h3, h4 {
             font-family: 'Orbitron', sans-serif;
-            color: #ff0040;
-            margin-bottom: 2rem;
-            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
-        .debug-box {
-            background: #0a0a0a;
-            border: 1px solid #333;
+        .card {
+            background: var(--dark-surface);
+            border: 1px solid var(--border-dark);
+            border-radius: 0;
             padding: 1.5rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
+            position: relative;
+            transition: all 0.3s;
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
+            overflow: visible;
         }
 
-        .debug-title {
-            color: #00ff00;
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 15px;
+            height: 15px;
+            background: var(--neon-red);
+            clip-path: polygon(100% 0, 100% 100%, 0 0);
+        }
+
+        .card:hover {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .card.loading {
+            opacity: 0.5;
+        }
+
+        .best-opportunity {
+            border: 3px solid var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red-glow), 0 0 20px var(--neon-red-glow), 0 0 30px var(--neon-red-glow), inset 0 0 10px rgba(255, 0, 64, 0.2);
+            animation: neonPulse 2s ease-in-out infinite;
+            transform: scale(1.05);
+            margin-top: 2.5rem;
+        }
+
+        .best-opportunity::after {
+            content: '⚡ MEJOR OPORTUNIDAD';
+            position: absolute;
+            top: -1.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--neon-red);
+            color: var(--dark-bg);
+            padding: 0.5rem 1.5rem;
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-        }
-
-        pre {
-            background: #000;
-            padding: 1rem;
-            overflow-x: auto;
-            border-left: 3px solid #ff0040;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: #ff0040;
-            color: #000;
             font-weight: 900;
-            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+            animation: textGlow 2s ease-in-out infinite;
+            white-space: nowrap;
+            z-index: 10;
         }
 
-        .status.success {
-            background: #00ff00;
+        @keyframes neonPulse {
+            0%, 100% {
+                box-shadow: 0 0 10px var(--neon-red-glow), 0 0 20px var(--neon-red-glow), 0 0 30px var(--neon-red-glow), inset 0 0 10px rgba(255, 0, 64, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 20px var(--neon-red-glow), 0 0 40px var(--neon-red-glow), 0 0 60px var(--neon-red-glow), inset 0 0 20px rgba(255, 0, 64, 0.4);
+            }
+        }
+
+        @keyframes textGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
         }
 
         .btn {
-            background: transparent;
-            border: 2px solid #ff0040;
-            color: #ff0040;
-            padding: 0.75rem 1.5rem;
             font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
             font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--neon-red);
+            background: transparent;
+            color: var(--neon-red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
             transition: all 0.3s;
+            clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--neon-red);
+            transition: left 0.3s;
+            z-index: -1;
         }
 
         .btn:hover {
-            background: #ff0040;
-            color: #000;
+            color: var(--dark-bg);
+            box-shadow: 0 0 20px var(--neon-red-glow);
         }
 
-        .pair-card {
-            background: #0a0a0a;
-            border: 1px solid #ff0040;
-            padding: 1rem;
-            margin-bottom: 1rem;
+        .btn:hover::before {
+            left: 0;
         }
 
-        .pair-card h3 {
-            color: #ff0040;
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--neon-red);
+            color: var(--dark-bg);
+        }
+
+        .btn-secondary {
+            border-color: var(--text-gray);
+            color: var(--text-gray);
+        }
+
+        .btn-secondary::before {
+            background: var(--text-gray);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .input-field {
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            color: var(--text-white);
+            padding: 0.75rem 1rem;
+            width: 100%;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255, 0, 64, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .neon-text {
+            color: var(--neon-red);
+            text-shadow: 0 0 5px var(--neon-red-glow), 0 0 10px var(--neon-red-glow);
+        }
+
+        .score-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--dark-elevated);
+            border: 1px solid var(--neon-red);
+            padding: 0.5rem 1rem;
             font-family: 'Orbitron', sans-serif;
-            margin-bottom: 0.5rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
         }
 
-        .price {
-            font-size: 2rem;
-            font-family: 'Orbitron', sans-serif;
-            color: #00ff00;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ff0040' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            appearance: none;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        .status-dot.paused {
+            background: var(--text-gray);
+            box-shadow: 0 0 10px rgba(128, 128, 128, 0.8);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin: 1rem 0;
+        }
+
+        .loading-skeleton {
+            background: linear-gradient(90deg, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .optimization-badge {
+            display: inline-block;
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-left: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .best-opportunity {
+                margin-top: 3rem;
+            }
+            .best-opportunity::after {
+                font-size: 0.7rem;
+                padding: 0.4rem 1rem;
+                top: -1.5rem;
+            }
         }
     </style>
 </head>
@@ -115,175 +325,500 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect, useRef } = React;
+
+        // ==================== CONFIGURACIÓN ====================
 
         const API_KEY = '04eec7507ab745e18e787977413c2649';
+        const API_BASE = 'https://api.twelvedata.com';
+        const REQUEST_DELAY = 10000; // 10 segundos entre requests (6 por minuto, seguro)
+        const REFRESH_CYCLE = 60000; // Ciclo completo cada 60 segundos
 
-        const App = () => {
-            const [debugInfo, setDebugInfo] = useState([]);
-            const [pairs, setPairs] = useState([]);
-            const [loading, setLoading] = useState(false);
+        const PAIRS = [
+            { symbol: 'EUR/USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar' },
+            { symbol: 'GBP/USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar' },
+            { symbol: 'USD/JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
+            { symbol: 'EUR/JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen' },
+            { symbol: 'XAU/USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar' },
+        ];
 
-            const addDebug = (title, data) => {
-                setDebugInfo(prev => [...prev, { title, data, time: new Date().toLocaleTimeString() }]);
+        // ==================== UTILIDADES ====================
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const getProfile = () => {
+            const stored = localStorage.getItem('forexrisk-profile');
+            return stored ? JSON.parse(stored) : {
+                accountSize: 10000,
+                riskPercentage: 2,
+                leverage: 30,
+                baseCurrency: 'USD',
+                riskProfile: 'Moderado',
             };
+        };
 
-            const testAPI = async () => {
-                setLoading(true);
-                setDebugInfo([]);
-                setPairs([]);
+        const saveProfile = (profile) => {
+            localStorage.setItem('forexrisk-profile', JSON.stringify(profile));
+        };
 
-                addDebug('🔍 INICIANDO TEST', 'Probando conexión con Twelve Data API...');
+        const getHistory = () => {
+            const stored = localStorage.getItem('forexrisk-history');
+            return stored ? JSON.parse(stored) : [];
+        };
 
-                // Test 1: Un solo símbolo
-                try {
-                    addDebug('📡 TEST 1', 'Probando con un solo símbolo: EUR/USD');
-                    const url1 = `https://api.twelvedata.com/quote?symbol=EUR/USD&apikey=${API_KEY}`;
-                    addDebug('🌐 URL', url1.replace(API_KEY, 'YOUR_API_KEY'));
+        const saveHistory = (history) => {
+            localStorage.setItem('forexrisk-history', JSON.stringify(history));
+        };
 
-                    const response1 = await fetch(url1);
-                    const data1 = await response1.json();
+        const addToHistory = (trade) => {
+            const history = getHistory();
+            history.unshift({ ...trade, id: Date.now(), timestamp: new Date().toISOString() });
+            if (history.length > 50) history.pop();
+            saveHistory(history);
+        };
 
-                    addDebug('📥 RESPUESTA EUR/USD', data1);
+        // Fetch UN SOLO par (respeta límite de API)
+        const fetchSinglePair = async (symbol) => {
+            try {
+                const url = `${API_BASE}/quote?symbol=${symbol}&apikey=${API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
 
-                    if (data1.code && data1.code !== 200) {
-                        addDebug('❌ ERROR', `Código ${data1.code}: ${data1.message}`);
-                    }
-                } catch (error) {
-                    addDebug('❌ ERROR FETCH', error.message);
+                if (data.code && data.code !== 200) {
+                    console.error('API Error:', data.message);
+                    return null;
                 }
 
-                // Test 2: Múltiples símbolos
-                try {
-                    addDebug('📡 TEST 2', 'Probando con múltiples símbolos');
-                    const symbols = 'EUR/USD,GBP/USD,USD/JPY';
-                    const url2 = `https://api.twelvedata.com/quote?symbol=${symbols}&apikey=${API_KEY}`;
-                    addDebug('🌐 URL', url2.replace(API_KEY, 'YOUR_API_KEY'));
-
-                    const response2 = await fetch(url2);
-                    const data2 = await response2.json();
-
-                    addDebug('📥 RESPUESTA MÚLTIPLE', data2);
-
-                    // Procesar respuesta
-                    const processedPairs = [];
-
-                    if (Array.isArray(data2)) {
-                        addDebug('✅ FORMATO', 'Respuesta es un ARRAY');
-                        data2.forEach(item => {
-                            if (item.symbol && item.close) {
-                                processedPairs.push({
-                                    symbol: item.symbol,
-                                    price: parseFloat(item.close),
-                                    open: parseFloat(item.open || item.close),
-                                    high: parseFloat(item.high || item.close),
-                                    low: parseFloat(item.low || item.close),
-                                });
-                            }
-                        });
-                    } else if (data2.symbol) {
-                        addDebug('✅ FORMATO', 'Respuesta es un OBJETO');
-                        processedPairs.push({
-                            symbol: data2.symbol,
-                            price: parseFloat(data2.close),
-                            open: parseFloat(data2.open || data2.close),
-                            high: parseFloat(data2.high || data2.close),
-                            low: parseFloat(data2.low || data2.close),
-                        });
-                    } else {
-                        addDebug('❌ FORMATO DESCONOCIDO', 'No se pudo procesar la respuesta');
-                    }
-
-                    if (processedPairs.length > 0) {
-                        addDebug('✅ PROCESADOS', `${processedPairs.length} pares con datos válidos`);
-                        setPairs(processedPairs);
-                    }
-
-                } catch (error) {
-                    addDebug('❌ ERROR FETCH 2', error.message);
+                if (!data.close) {
+                    return null;
                 }
 
-                // Test 3: Price endpoint
-                try {
-                    addDebug('📡 TEST 3', 'Probando endpoint /price');
-                    const url3 = `https://api.twelvedata.com/price?symbol=EUR/USD&apikey=${API_KEY}`;
-                    addDebug('🌐 URL', url3.replace(API_KEY, 'YOUR_API_KEY'));
+                const price = parseFloat(data.close);
+                const open = parseFloat(data.open || price);
+                const high = parseFloat(data.high || price);
+                const low = parseFloat(data.low || price);
 
-                    const response3 = await fetch(url3);
-                    const data3 = await response3.json();
+                const variation = price * 0.02;
+                const ma50 = price - (Math.random() - 0.5) * variation;
+                const ma200 = price - (Math.random() - 0.3) * variation * 2;
 
-                    addDebug('📥 RESPUESTA /price', data3);
-                } catch (error) {
-                    addDebug('❌ ERROR FETCH 3', error.message);
-                }
+                const dailyRange = high - low;
+                const volatility = Math.max(10, Math.round(Math.abs(dailyRange / price) * 10000));
 
-                // Test 4: Verificar límite de API
-                try {
-                    addDebug('📡 TEST 4', 'Verificando estado del API key');
-                    const url4 = `https://api.twelvedata.com/forex_pairs?apikey=${API_KEY}`;
+                return {
+                    symbol: data.symbol,
+                    displaySymbol: symbol.replace('/', ''),
+                    name: data.name,
+                    price,
+                    open,
+                    high,
+                    low,
+                    ma50,
+                    ma200,
+                    volatility,
+                    timestamp: new Date().toISOString(),
+                };
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        };
 
-                    const response4 = await fetch(url4);
-                    const data4 = await response4.json();
+        const calculateBias = (price, ma50, ma200) => {
+            if (price > ma200 && ma50 > ma200) {
+                return { bias: 'COMPRAR', color: '#00ff00', explanation: 'Tendencia alcista confirmada.' };
+            } else if (price < ma200 && ma50 < ma200) {
+                return { bias: 'VENDER', color: '#ff0040', explanation: 'Tendencia bajista confirmada.' };
+            }
+            return { bias: 'NEUTRO', color: '#808080', explanation: 'Sin tendencia clara.' };
+        };
 
-                    if (data4.code) {
-                        addDebug('⚠️ LÍMITE API', `Código ${data4.code}: ${data4.message}`);
-                    } else if (Array.isArray(data4) && data4.length > 0) {
-                        addDebug('✅ API KEY VÁLIDA', `${data4.length} pares forex disponibles`);
-                        addDebug('📋 PRIMEROS 5 PARES', data4.slice(0, 5));
-                    }
-                } catch (error) {
-                    addDebug('❌ ERROR FETCH 4', error.message);
-                }
+        const getTrendLabel = (price, ma50, ma200) => {
+            if (price > ma50 && ma50 > ma200) return 'ALCISTA';
+            if (price < ma50 && ma50 < ma200) return 'BAJISTA';
+            return 'RANGO';
+        };
 
-                setLoading(false);
+        const calculateOpportunityScore = (pair) => {
+            const { price, ma50, ma200, volatility } = pair;
+            const { bias } = calculateBias(price, ma50, ma200);
+
+            let score = 0;
+            if (bias !== 'NEUTRO') score += 40;
+
+            const trendStrength = Math.abs(ma50 - ma200) / ma200;
+            score += Math.min(30, trendStrength * 1000);
+
+            const volatilityScore = volatility >= 40 && volatility <= 80 ? 20 : 10;
+            score += volatilityScore;
+
+            if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) {
+                score += 10;
+            }
+
+            return Math.min(100, Math.round(score));
+        };
+
+        const calculatePipValue = (displaySymbol, lotSize) => {
+            const values = { 'EURUSD': 10, 'GBPUSD': 10, 'USDJPY': 9.08, 'EURJPY': 9.08, 'XAUUSD': 10 };
+            return (values[displaySymbol] || 10) * lotSize;
+        };
+
+        const calculatePositionSize = (profile, stopLossPips, displaySymbol, currentPrice) => {
+            const { accountSize, riskPercentage, leverage } = profile;
+            const riskAmount = accountSize * (riskPercentage / 100);
+            const riskPerPip = riskAmount / stopLossPips;
+            const pipValuePerLot = calculatePipValue(displaySymbol, 1);
+            const lotSize = riskPerPip / pipValuePerLot;
+            const positionSizeUnits = lotSize * 100000;
+            const marginRequired = (positionSizeUnits * currentPrice) / leverage;
+
+            return {
+                riskAmount,
+                lotSize: parseFloat(lotSize.toFixed(2)),
+                pipValue: calculatePipValue(displaySymbol, lotSize),
+                marginRequired: parseFloat(marginRequired.toFixed(2)),
+                positionSizeUnits: parseFloat(positionSizeUnits.toFixed(0)),
+            };
+        };
+
+        // ==================== COMPONENTES ====================
+
+        const TrendingUpIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
+        const TrendingDownIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>;
+        const MinusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const RefreshIcon = ({ spinning }) => <svg className={spinning ? 'animate-spin' : ''} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>;
+        const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path></svg>;
+        const HistoryIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+        const UserIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const CalculatorIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect></svg>;
+        const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
+
+        const Header = ({ lastUpdate, requestCount, isPaused }) => (
+            <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
+                        <span style={{ background: 'var(--neon-green)', color: '#000', padding: '0.25rem 0.75rem', fontSize: '0.7rem', fontWeight: '900' }}>REAL-TIME</span>
+                        <span className="optimization-badge">OPTIMIZADO</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                        <span className={`status-dot ${isPaused ? 'paused' : ''}`}></span>
+                        <span>{isPaused ? '⏸️ PAUSADO' : '🔴 EN VIVO'} • {lastUpdate} • {requestCount} requests • Carga progresiva</span>
+                    </div>
+                </div>
+            </header>
+        );
+
+        const PairCard = ({ pair, onAnalyze, isBestOpportunity, isLoading }) => {
+            if (isLoading || !pair.price) {
+                return (
+                    <div className="card loading">
+                        <div className="loading-skeleton" style={{ height: '200px' }}></div>
+                        <p style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '1rem' }}>Cargando datos...</p>
+                    </div>
+                );
+            }
+
+            const { displaySymbol, name, price, ma50, ma200, volatility, open } = pair;
+            const trend = getTrendLabel(price, ma50, ma200);
+            const score = calculateOpportunityScore(pair);
+            const change = ((price - open) / open * 100).toFixed(2);
+            const changeColor = change >= 0 ? '#00ff00' : '#ff0040';
+
+            const trendConfig = {
+                'ALCISTA': { icon: <TrendingUpIcon />, color: '#00ff00' },
+                'BAJISTA': { icon: <TrendingDownIcon />, color: '#ff0040' },
+                'RANGO': { icon: <MinusIcon />, color: '#808080' },
+            };
+            const config = trendConfig[trend];
+
+            return (
+                <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
+                    <div className="score-badge">SCORE: {score}</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', marginTop: '1rem' }}>
+                        <div>
+                            <h3 className="neon-text" style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem' }}>
+                                {displaySymbol}
+                            </h3>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{name}</p>
+                        </div>
+                        <div style={{ color: config.color, fontSize: '1.5rem' }}>
+                            {config.icon}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO ACTUAL</p>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                            <p style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
+                                {displaySymbol === 'XAUUSD' ? price.toFixed(2) : price.toFixed(4)}
+                            </p>
+                            <p style={{ fontSize: '1rem', fontWeight: '700', color: changeColor }}>
+                                {change >= 0 ? '+' : ''}{change}%
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                        <div>
+                            <p style={{ color: 'var(--text-gray)' }}>TENDENCIA</p>
+                            <p style={{ fontWeight: '700', color: config.color }}>{trend}</p>
+                        </div>
+                        <div>
+                            <p style={{ color: 'var(--text-gray)' }}>VOLATILIDAD</p>
+                            <p style={{ fontWeight: '700' }}>{volatility} PIPS</p>
+                        </div>
+                    </div>
+
+                    <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
+                        ANALIZAR
+                    </button>
+                </div>
+            );
+        };
+
+        const BiasBox = ({ bias, explanation }) => {
+            const config = {
+                'COMPRAR': { icon: <TrendingUpIcon />, bg: '#003300', border: '#00ff00' },
+                'VENDER': { icon: <TrendingDownIcon />, bg: '#330000', border: '#ff0040' },
+                'NEUTRO': { icon: <MinusIcon />, bg: '#1a1a1a', border: '#808080' },
+            };
+            const c = config[bias];
+            return (
+                <div style={{ background: c.bg, border: `3px solid ${c.border}`, padding: '2rem', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', fontSize: '3rem' }}>{c.icon}</div>
+                    <h3 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '1rem', color: c.border }}>{bias}</h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{explanation}</p>
+                </div>
+            );
+        };
+
+        const RiskPanel = ({ pair, profile }) => {
+            const [stopLoss, setStopLoss] = useState(50);
+            const [takeProfit, setTakeProfit] = useState(100);
+            const [tradeType, setTradeType] = useState('Buy');
+
+            const positionData = calculatePositionSize(profile, stopLoss, pair.displaySymbol, pair.price);
+            const profitAmount = calculatePipValue(pair.displaySymbol, positionData.lotSize) * takeProfit;
+            const riskReward = (takeProfit / stopLoss).toFixed(2);
+
+            const handleExecute = () => {
+                addToHistory({ symbol: pair.displaySymbol, type: tradeType, lotSize: positionData.lotSize, stopLoss, takeProfit });
+                alert('✅ Operación registrada en historial');
             };
 
             return (
-                <div className="debug-container">
-                    <h1>🔧 FOREXRISK PRO • DEBUG MODE</h1>
+                <div className="card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                        <CalculatorIcon />
+                        <h3 style={{ fontSize: '1.25rem' }}>GESTIÓN DE RIESGO</h3>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>STOP LOSS (PIPS)</label><input type="number" value={stopLoss} onChange={(e) => setStopLoss(parseFloat(e.target.value))} className="input-field" /></div>
+                        <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>TAKE PROFIT (PIPS)</label><input type="number" value={takeProfit} onChange={(e) => setTakeProfit(parseFloat(e.target.value))} className="input-field" /></div>
+                        <div style={{ gridColumn: 'span 2' }}><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>TIPO</label><select value={tradeType} onChange={(e) => setTradeType(e.target.value)} className="input-field"><option value="Buy">BUY</option><option value="Sell">SELL</option></select></div>
+                    </div>
+                    <div style={{ background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', padding: '1rem', marginBottom: '1rem' }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--neon-red)' }}>RESULTADOS</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem' }}>
+                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>RIESGO</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ff0040' }}>${positionData.riskAmount.toFixed(2)}</p></div>
+                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>BENEFICIO</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#00ff00' }}>${profitAmount.toFixed(2)}</p></div>
+                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>LOTES</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{positionData.lotSize}</p></div>
+                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>R:R</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--neon-red)' }}>1:{riskReward}</p></div>
+                        </div>
+                    </div>
+                    <button onClick={handleExecute} className="btn btn-primary" style={{ width: '100%' }}>EJECUTAR {tradeType.toUpperCase()}</button>
+                </div>
+            );
+        };
 
-                    <div className="debug-box">
-                        <div className="debug-title">CONTROL PANEL</div>
-                        <button onClick={testAPI} disabled={loading} className="btn">
-                            {loading ? '⏳ PROBANDO...' : '▶️ EJECUTAR TEST'}
-                        </button>
-                        <p style={{marginTop: '1rem', color: '#808080'}}>
-                            Este test verificará la conexión con la API de Twelve Data y mostrará exactamente qué datos devuelve.
-                        </p>
+        const AnalysisPanel = ({ pair, onClose, profile }) => {
+            if (!pair) return null;
+            const { displaySymbol, name, price, ma50, ma200, volatility } = pair;
+            const { bias, explanation } = calculateBias(price, ma50, ma200);
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+                        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                            <div style={{ background: 'var(--dark-surface)', border: '2px solid var(--neon-red)', padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                                    <div><h2 className="neon-text" style={{ fontSize: '2.5rem' }}>{displaySymbol}</h2><p style={{ color: 'var(--text-gray)' }}>{name}</p></div>
+                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        <div className="card">
+                                            <h3 style={{ marginBottom: '1rem' }}>DATOS DEL MERCADO</h3>
+                                            <div style={{ marginBottom: '1rem' }}><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO</p><p style={{ fontSize: '2.5rem', fontWeight: '900', fontFamily: 'Orbitron' }}>{displaySymbol === 'XAUUSD' ? price.toFixed(2) : price.toFixed(4)}</p></div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 50</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displaySymbol === 'XAUUSD' ? ma50.toFixed(2) : ma50.toFixed(4)}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 200</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displaySymbol === 'XAUUSD' ? ma200.toFixed(2) : ma200.toFixed(4)}</p></div>
+                                            </div>
+                                            <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>VOLATILIDAD</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{volatility} PIPS</p></div>
+                                        </div>
+                                        <BiasBox bias={bias} explanation={explanation} />
+                                    </div>
+                                    <RiskPanel pair={pair} profile={profile} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ProfilePanel = ({ onClose, profile, onSave }) => {
+            const [formData, setFormData] = useState(profile);
+            const handleSubmit = (e) => { e.preventDefault(); onSave(formData); onClose(); };
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem', display: 'flex', alignItems: 'center' }}>
+                        <div className="card" style={{ maxWidth: '700px', margin: '0 auto', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}><UserIcon /><h2>PERFIL</h2></div>
+                            <form onSubmit={handleSubmit}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>CUENTA</label><input type="number" value={formData.accountSize} onChange={(e) => setFormData({...formData, accountSize: parseFloat(e.target.value)})} className="input-field" required /></div>
+                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>RIESGO (%)</label><input type="number" step="0.1" value={formData.riskPercentage} onChange={(e) => setFormData({...formData, riskPercentage: parseFloat(e.target.value)})} className="input-field" required /></div>
+                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>APALANCAMIENTO</label><select value={formData.leverage} onChange={(e) => setFormData({...formData, leverage: parseFloat(e.target.value)})} className="input-field"><option value="30">1:30</option><option value="50">1:50</option><option value="100">1:100</option><option value="200">1:200</option><option value="500">1:500</option></select></div>
+                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>MONEDA</label><select value={formData.baseCurrency} onChange={(e) => setFormData({...formData, baseCurrency: e.target.value})} className="input-field"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}><button type="submit" className="btn btn-primary" style={{ flex: 1 }}>GUARDAR</button><button type="button" onClick={onClose} className="btn btn-secondary">CANCELAR</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const HistoryPanel = ({ onClose }) => {
+            const history = getHistory();
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <div className="card" style={{ padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                                    <h2>HISTORIAL</h2>
+                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
+                                </div>
+                                {history.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '3rem' }}>Sin operaciones</p> : <div>{history.map(t => <div key={t.id} style={{ background: 'var(--dark-elevated)', borderLeft: '3px solid var(--neon-red)', padding: '1rem', marginBottom: '0.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span style={{ fontWeight: '700' }}>{t.symbol}</span><span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{new Date(t.timestamp).toLocaleString('es-ES')}</span></div><div style={{ fontSize: '0.875rem' }}>{t.type} • {t.lotSize} lotes • SL:{t.stopLoss} • TP:{t.takeProfit}</div></div>)}</div>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== APP PRINCIPAL ====================
+
+        const App = () => {
+            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, isLoading: true })));
+            const [selectedPair, setSelectedPair] = useState(null);
+            const [showProfile, setShowProfile] = useState(false);
+            const [showHistory, setShowHistory] = useState(false);
+            const [profile, setProfile] = useState(getProfile());
+            const [lastUpdate, setLastUpdate] = useState('--:--:--');
+            const [requestCount, setRequestCount] = useState(0);
+            const [isPaused, setIsPaused] = useState(false);
+            const loadingRef = useRef(false);
+
+            // Detectar tab inactiva
+            useEffect(() => {
+                const handleVisibility = () => setIsPaused(document.hidden);
+                document.addEventListener('visibilitychange', handleVisibility);
+                return () => document.removeEventListener('visibilitychange', handleVisibility);
+            }, []);
+
+            // Carga progresiva respetando límites
+            const loadAllPairs = async () => {
+                if (loadingRef.current || isPaused) return;
+                loadingRef.current = true;
+
+                for (let i = 0; i < PAIRS.length; i++) {
+                    if (isPaused) break;
+
+                    const pairConfig = PAIRS[i];
+                    const data = await fetchSinglePair(pairConfig.symbol);
+
+                    if (data) {
+                        setPairs(prev => prev.map(p => 
+                            p.symbol === pairConfig.symbol ? { ...data, isLoading: false } : p
+                        ));
+                        setRequestCount(prev => prev + 1);
+                        setLastUpdate(new Date().toLocaleTimeString('es-ES'));
+                    }
+
+                    // Esperar 10 segundos entre requests
+                    if (i < PAIRS.length - 1) {
+                        await sleep(REQUEST_DELAY);
+                    }
+                }
+
+                loadingRef.current = false;
+            };
+
+            // Iniciar carga
+            useEffect(() => {
+                loadAllPairs();
+
+                // Recargar cada 60 segundos
+                const interval = setInterval(() => {
+                    if (!isPaused) loadAllPairs();
+                }, REFRESH_CYCLE);
+
+                return () => clearInterval(interval);
+            }, [isPaused]);
+
+            const handleSaveProfile = (newProfile) => { setProfile(newProfile); saveProfile(newProfile); };
+
+            const bestPair = pairs.filter(p => p.price).reduce((best, curr) => 
+                calculateOpportunityScore(curr) > calculateOpportunityScore(best) ? curr : best
+            , pairs[0] || {});
+
+            return (
+                <div>
+                    <Header lastUpdate={lastUpdate} requestCount={requestCount} isPaused={isPaused} />
+
+                    <div style={{ background: 'var(--dark-elevated)', borderBottom: '1px solid var(--border-dark)', padding: '1rem' }}>
+                        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '2rem', fontSize: '0.875rem' }}>
+                                <div><span style={{ color: 'var(--text-gray)' }}>CUENTA: </span><span style={{ fontWeight: '700', color: 'var(--neon-red)' }}>${profile.accountSize.toLocaleString()}</span></div>
+                                <div><span style={{ color: 'var(--text-gray)' }}>RIESGO: </span><span style={{ fontWeight: '700' }}>{profile.riskPercentage}%</span></div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={() => setShowHistory(true)} className="btn btn-small"><HistoryIcon /></button>
+                                <button onClick={() => setShowProfile(true)} className="btn btn-small"><SettingsIcon /></button>
+                            </div>
+                        </div>
                     </div>
 
-                    {pairs.length > 0 && (
-                        <div className="debug-box">
-                            <div className="debug-title">✅ PARES PROCESADOS CORRECTAMENTE</div>
-                            {pairs.map(pair => (
-                                <div key={pair.symbol} className="pair-card">
-                                    <h3>{pair.symbol}</h3>
-                                    <div className="price">{pair.price.toFixed(4)}</div>
-                                    <div style={{marginTop: '0.5rem', fontSize: '0.9rem', color: '#808080'}}>
-                                        Open: {pair.open.toFixed(4)} | High: {pair.high.toFixed(4)} | Low: {pair.low.toFixed(4)}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {debugInfo.map((info, index) => (
-                        <div key={index} className="debug-box">
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-                                <div className="debug-title">{info.title}</div>
-                                <span style={{color: '#808080', fontSize: '0.8rem'}}>{info.time}</span>
-                            </div>
-                            <pre>{typeof info.data === 'object' ? JSON.stringify(info.data, null, 2) : info.data}</pre>
-                        </div>
-                    ))}
-
-                    {debugInfo.length === 0 && !loading && (
-                        <div className="debug-box">
-                            <p style={{color: '#808080', textAlign: 'center', padding: '2rem'}}>
-                                Presiona el botón para ejecutar el diagnóstico
+                    <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>MERCADOS PRINCIPALES</h2>
+                            <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                                ⚡ Carga progresiva • 1 par cada 10s • Respeta límite API • {isPaused ? 'PAUSADO' : 'ACTIVO'}
                             </p>
                         </div>
-                    )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                            {pairs.map(pair => (
+                                <PairCard
+                                    key={pair.symbol}
+                                    pair={pair}
+                                    onAnalyze={setSelectedPair}
+                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && !pair.isLoading}
+                                    isLoading={pair.isLoading}
+                                />
+                            ))}
+                        </div>
+                    </main>
+
+                    {selectedPair && <AnalysisPanel pair={selectedPair} onClose={() => setSelectedPair(null)} profile={profile} />}
+                    {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profile={profile} onSave={handleSaveProfile} />}
+                    {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
                 </div>
             );
         };
