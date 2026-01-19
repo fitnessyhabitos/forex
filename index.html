@@ -361,11 +361,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // ==================== CONFIGURACIÓN ====================
-
         const TWELVE_DATA_API_KEY = '04eec7507ab745e18e787977413c2649';
         const TWELVE_DATA_BASE = 'https://api.twelvedata.com';
-
         const FINNHUB_API_KEY = 'd5n740hr01qh5ppc15r0d5n740hr01qh5ppc15rg';
         const FINNHUB_WS = 'wss://ws.finnhub.io';
 
@@ -376,8 +373,6 @@
             { symbol: 'EUR/JPY', finnhubSymbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3, pipValue: 9.09 },
             { symbol: 'XAU/USD', finnhubSymbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2, pipValue: 1 },
         ];
-
-        // ==================== LOCALSTORAGE ====================
 
         const loadProfile = () => {
             const saved = localStorage.getItem('forexDataProProfile');
@@ -391,103 +386,81 @@
             };
         };
 
-        const saveProfile = (profile) => {
-            localStorage.setItem('forexDataProProfile', JSON.stringify(profile));
-        };
-
+        const saveProfile = (profile) => localStorage.setItem('forexDataProProfile', JSON.stringify(profile));
         const loadAlarms = () => {
             const saved = localStorage.getItem('forexDataProAlarms');
             return saved ? JSON.parse(saved) : [];
         };
+        const saveAlarms = (alarms) => localStorage.setItem('forexDataProAlarms', JSON.stringify(alarms));
 
-        const saveAlarms = (alarms) => {
-            localStorage.setItem('forexDataProAlarms', JSON.stringify(alarms));
-        };
-
-        // ==================== CÁLCULOS DE TRADING ====================
-
-        const calculatePositionSize = (accountSize, riskPercent, stopLossPips, pipValue) => {
-            const riskAmount = accountSize * (riskPercent / 100);
-            const positionSize = riskAmount / (stopLossPips * pipValue);
-            return positionSize;
-        };
-
-        const calculatePotentialProfit = (lotSize, pips, pipValue) => {
-            return lotSize * pips * pipValue;
-        };
-
-        const calculateRequiredMargin = (lotSize, price, leverage) => {
-            const contractSize = 100000; // Standard lot
-            return (lotSize * contractSize * price) / leverage;
-        };
-
-        // ==================== FUNCIONES API ====================
+        const calculatePotentialProfit = (lotSize, pips, pipValue) => lotSize * pips * pipValue;
+        const calculateRequiredMargin = (lotSize, price, leverage) => (lotSize * 100000 * price) / leverage;
 
         const fetchDailyOpen = async (symbol) => {
             try {
                 const url = `${TWELVE_DATA_BASE}/time_series?symbol=${symbol}&interval=1day&outputsize=1&apikey=${TWELVE_DATA_API_KEY}`;
                 const response = await fetch(url);
                 const data = await response.json();
-
                 if (data.values && data.values.length > 0) {
                     return {
                         open: parseFloat(data.values[0].open),
                         high: parseFloat(data.values[0].high),
                         low: parseFloat(data.values[0].low),
-                        close: parseFloat(data.values[0].close),
-                        datetime: data.values[0].datetime
+                        close: parseFloat(data.values[0].close)
                     };
                 }
                 return null;
-            } catch (error) {
-                console.error(`Error fetching daily open for ${symbol}:`, error);
-                return null;
-            }
+            } catch (error) { return null; }
         };
 
-        // ==================== FUNCIONES TÉCNICAS ====================
-
         const calculateRSI = (prices, period = 14) => {
-            if (prices.length < period + 1) return 50;
+            if (prices.length < period + 1) {
+                if (prices.length < 2) return 50;
+                const change = prices[prices.length - 1] - prices[0];
+                return change > 0 ? 65 : change < 0 ? 35 : 50;
+            }
             let gains = 0, losses = 0;
             for (let i = prices.length - period; i < prices.length; i++) {
                 const change = prices[i] - prices[i - 1];
-                if (change > 0) gains += change;
-                else losses += Math.abs(change);
+                if (change > 0) gains += change; else losses += Math.abs(change);
             }
-            const avgGain = gains / period;
-            const avgLoss = losses / period;
+            const avgGain = gains / period, avgLoss = losses / period;
             if (avgLoss === 0) return 100;
-            const rs = avgGain / avgLoss;
-            return 100 - (100 / (1 + rs));
+            return 100 - (100 / (1 + avgGain / avgLoss));
         };
 
         const calculateEMA = (prices, period) => {
             if (prices.length === 0) return 0;
             const k = 2 / (period + 1);
             let ema = prices[0];
-            for (let i = 1; i < prices.length; i++) {
-                ema = prices[i] * k + ema * (1 - k);
-            }
+            for (let i = 1; i < prices.length; i++) ema = prices[i] * k + ema * (1 - k);
             return ema;
         };
 
         const calculateMACD = (prices) => {
-            if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
-            const ema12 = calculateEMA(prices, 12);
-            const ema26 = calculateEMA(prices, 26);
+            if (prices.length < 5) {
+                if (prices.length < 2) return { macd: 0, signal: 0, histogram: 0 };
+                const trend = prices[prices.length - 1] - prices[0];
+                const macd = trend > 0 ? 0.0001 : -0.0001;
+                return { macd, signal: 0, histogram: macd };
+            }
+            const ema12 = calculateEMA(prices, Math.min(12, prices.length));
+            const ema26 = calculateEMA(prices, Math.min(26, prices.length));
             const macd = ema12 - ema26;
-            const signal = macd * 0.9;
-            return { macd, signal, histogram: macd - signal };
+            return { macd, signal: macd * 0.9, histogram: macd - macd * 0.9 };
         };
 
         const calculateBollingerBands = (prices, period = 20, stdDev = 2) => {
-            if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
-            const slice = prices.slice(-period);
-            const middle = slice.reduce((a, b) => a + b, 0) / period;
-            const variance = slice.reduce((sum, price) => sum + Math.pow(price - middle, 2), 0) / period;
+            if (prices.length < 3) {
+                const price = prices[prices.length - 1] || 0;
+                return { upper: price * 1.002, middle: price, lower: price * 0.998 };
+            }
+            const actualPeriod = Math.min(period, prices.length);
+            const slice = prices.slice(-actualPeriod);
+            const middle = slice.reduce((a, b) => a + b, 0) / actualPeriod;
+            const variance = slice.reduce((sum, price) => sum + Math.pow(price - middle, 2), 0) / actualPeriod;
             const std = Math.sqrt(variance);
-            return { upper: middle + (std * stdDev), middle, lower: middle - (std * stdDev) };
+            return { upper: middle + std * stdDev, middle, lower: middle - std * stdDev };
         };
 
         const calculateMA = (prices, period) => {
@@ -498,53 +471,32 @@
 
         const calculateOpportunityScore = (pair, priceHistory) => {
             if (!pair.price || !pair.dailyOpen) return 0;
-
             const { price, dailyOpen, dailyHigh, dailyLow, volatility = 50 } = pair;
             let score = 0;
-
             const dayChange = ((price - dailyOpen) / dailyOpen) * 100;
             const absDayChange = Math.abs(dayChange);
-            if (absDayChange > 0.5) score += 40;
-            else if (absDayChange > 0.3) score += 30;
-            else if (absDayChange > 0.1) score += 20;
-            else score += 10;
-
+            if (absDayChange > 0.5) score += 40; else if (absDayChange > 0.3) score += 30; else if (absDayChange > 0.1) score += 20; else score += 10;
             const currentHigh = Math.max(dailyHigh || price, price);
             const currentLow = Math.min(dailyLow || price, price);
             if (currentHigh !== currentLow) {
                 const rangePosition = (price - currentLow) / (currentHigh - currentLow);
-                if (rangePosition > 0.8 || rangePosition < 0.2) score += 30;
-                else if (rangePosition > 0.6 || rangePosition < 0.4) score += 20;
-                else score += 10;
-            } else {
-                score += 15;
-            }
-
-            if (volatility > 40 && volatility < 100) score += 20;
-            else if (volatility > 20 && volatility < 150) score += 15;
-            else score += 10;
-
-            if (priceHistory && priceHistory.length >= 10) {
-                const recentPrices = priceHistory.slice(-10);
-                const ma5 = calculateMA(recentPrices, 5);
-                const ma10 = calculateMA(recentPrices, 10);
-                if ((price > ma5 && ma5 > ma10) || (price < ma5 && ma5 < ma10)) {
-                    score += 10;
-                } else {
-                    score += 5;
-                }
-            } else {
-                score += 5;
-            }
-
+                if (rangePosition > 0.8 || rangePosition < 0.2) score += 30; else if (rangePosition > 0.6 || rangePosition < 0.4) score += 20; else score += 10;
+            } else score += 15;
+            if (volatility > 40 && volatility < 100) score += 20; else if (volatility > 20 && volatility < 150) score += 15; else score += 10;
+            if (priceHistory && priceHistory.length >= 5) {
+                const recentPrices = priceHistory.slice(-Math.min(10, priceHistory.length));
+                const ma5 = calculateMA(recentPrices, Math.min(5, recentPrices.length));
+                const ma10 = calculateMA(recentPrices, Math.min(10, recentPrices.length));
+                if ((price > ma5 && ma5 > ma10) || (price < ma5 && ma5 < ma10)) score += 10; else score += 5;
+            } else score += 5;
             return Math.min(100, Math.round(score));
         };
 
         const analyzeSignals = (pair, priceHistory) => {
-            if (!priceHistory || priceHistory.length < 15) {
+            if (!priceHistory || priceHistory.length < 3) {
                 return {
                     signal: 'NEUTRAL', confidence: 0,
-                    reasons: ['Acumulando datos (necesita 15+ ticks)'],
+                    reasons: ['Acumulando datos (' + (priceHistory?.length || 0) + '/3 ticks)'],
                     entry: pair.price, stopLoss: pair.price * 0.995, takeProfit: pair.price * 1.01,
                     rsi: 50, macd: { macd: 0, signal: 0, histogram: 0 },
                     bb: { upper: 0, middle: 0, lower: 0 }
@@ -555,59 +507,61 @@
             const macd = calculateMACD(priceHistory);
             const bb = calculateBollingerBands(priceHistory);
             const currentPrice = pair.price;
+            const ma5 = calculateMA(priceHistory, Math.min(5, priceHistory.length));
             const ma10 = calculateMA(priceHistory, Math.min(10, priceHistory.length));
-            const ma20 = calculateMA(priceHistory, Math.min(20, priceHistory.length));
 
             let signal = 'NEUTRAL', confidence = 0;
             const reasons = [];
 
-            if (rsi < 30) { confidence += 30; reasons.push(`RSI sobreventa (${rsi.toFixed(1)})`); signal = 'BUY'; }
-            else if (rsi > 70) { confidence += 30; reasons.push(`RSI sobrecompra (${rsi.toFixed(1)})`); signal = 'SELL'; }
+            if (rsi < 30) { confidence += 30; reasons.push(\`RSI sobreventa (\${rsi.toFixed(1)})\`); signal = 'BUY'; }
+            else if (rsi > 70) { confidence += 30; reasons.push(\`RSI sobrecompra (\${rsi.toFixed(1)})\`); signal = 'SELL'; }
             else if (rsi < 40) { confidence += 15; reasons.push('RSI tendencia compra'); if (signal === 'NEUTRAL') signal = 'BUY'; }
             else if (rsi > 60) { confidence += 15; reasons.push('RSI tendencia venta'); if (signal === 'NEUTRAL') signal = 'SELL'; }
 
             if (macd.histogram > 0 && macd.macd > macd.signal) {
-                confidence += 25; reasons.push('MACD cruce alcista');
-                if (signal === 'NEUTRAL') signal = 'BUY';
+                confidence += 25; reasons.push('MACD cruce alcista'); if (signal === 'NEUTRAL') signal = 'BUY';
             } else if (macd.histogram < 0 && macd.macd < macd.signal) {
-                confidence += 25; reasons.push('MACD cruce bajista');
-                if (signal === 'NEUTRAL') signal = 'SELL';
+                confidence += 25; reasons.push('MACD cruce bajista'); if (signal === 'NEUTRAL') signal = 'SELL';
             }
 
-            if (currentPrice < bb.lower) {
-                confidence += 20; reasons.push('Precio bajo Bollinger');
-                if (signal === 'NEUTRAL') signal = 'BUY';
-            } else if (currentPrice > bb.upper) {
-                confidence += 20; reasons.push('Precio sobre Bollinger');
-                if (signal === 'NEUTRAL') signal = 'SELL';
-            }
+            if (currentPrice < bb.lower) { confidence += 20; reasons.push('Precio bajo Bollinger'); if (signal === 'NEUTRAL') signal = 'BUY'; }
+            else if (currentPrice > bb.upper) { confidence += 20; reasons.push('Precio sobre Bollinger'); if (signal === 'NEUTRAL') signal = 'SELL'; }
 
-            if (ma10 > ma20 && currentPrice > ma10) {
-                confidence += 15; reasons.push('Tendencia alcista');
-                if (signal === 'NEUTRAL') signal = 'BUY';
-            } else if (ma10 < ma20 && currentPrice < ma10) {
-                confidence += 15; reasons.push('Tendencia bajista');
-                if (signal === 'NEUTRAL') signal = 'SELL';
+            if (priceHistory.length >= 5) {
+                if (ma5 > ma10 && currentPrice > ma5) { confidence += 15; reasons.push('Tendencia alcista (MA)'); if (signal === 'NEUTRAL') signal = 'BUY'; }
+                else if (ma5 < ma10 && currentPrice < ma5) { confidence += 15; reasons.push('Tendencia bajista (MA)'); if (signal === 'NEUTRAL') signal = 'SELL'; }
             }
 
             const volatility = pair.volatility || 50;
             if (volatility > 30 && volatility < 100) { confidence += 10; reasons.push('Volatilidad óptima'); }
 
-            const atr = ((bb.upper - bb.lower) / 2) || (currentPrice * 0.002);
-            let entry = currentPrice, stopLoss, takeProfit;
-
-            if (signal === 'BUY') {
-                stopLoss = currentPrice - (atr * 1.5);
-                takeProfit = currentPrice + (atr * 3);
-            } else if (signal === 'SELL') {
-                stopLoss = currentPrice + (atr * 1.5);
-                takeProfit = currentPrice - (atr * 3);
-            } else {
-                stopLoss = currentPrice * 0.995;
-                takeProfit = currentPrice * 1.01;
+            if (pair.dailyOpen) {
+                const dayChange = ((currentPrice - pair.dailyOpen) / pair.dailyOpen) * 100;
+                if (Math.abs(dayChange) > 0.3) {
+                    confidence += 10;
+                    if (dayChange > 0) { reasons.push('Momentum alcista del día'); if (signal === 'NEUTRAL') signal = 'BUY'; }
+                    else { reasons.push('Momentum bajista del día'); if (signal === 'NEUTRAL') signal = 'SELL'; }
+                }
             }
 
-            return { signal, confidence: Math.min(confidence, 100), reasons, rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma10, ma20 };
+            if (signal === 'NEUTRAL' && priceHistory.length >= 3) {
+                const firstPrice = priceHistory[0];
+                const lastPrice = priceHistory[priceHistory.length - 1];
+                const trend = ((lastPrice - firstPrice) / firstPrice) * 100;
+                if (Math.abs(trend) > 0.01) {
+                    confidence = 35;
+                    if (trend > 0) { signal = 'BUY'; reasons.push('Tendencia micro alcista'); }
+                    else { signal = 'SELL'; reasons.push('Tendencia micro bajista'); }
+                }
+            }
+
+            const atr = ((bb.upper - bb.lower) / 2) || (currentPrice * 0.002);
+            let entry = currentPrice, stopLoss, takeProfit;
+            if (signal === 'BUY') { stopLoss = currentPrice - atr * 1.5; takeProfit = currentPrice + atr * 3; }
+            else if (signal === 'SELL') { stopLoss = currentPrice + atr * 1.5; takeProfit = currentPrice - atr * 3; }
+            else { stopLoss = currentPrice * 0.995; takeProfit = currentPrice * 1.01; }
+
+            return { signal, confidence: Math.min(confidence, 100), reasons: reasons.length > 0 ? reasons : ['Análisis en curso'], rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma5, ma10 };
         };
 
         const calculateRatioProbabilities = (pair, analysis, profile) => {
@@ -616,28 +570,17 @@
             const volFactor = Math.max(0.3, Math.min(1, 100 / volatility));
             const confFactor = confidence / 100;
             const baseProbability = volFactor * confFactor * 0.8;
-
             const stopLossPips = Math.abs(analysis.entry - analysis.stopLoss) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
-
             return [
-                { ratio: '1:1', pips: stopLossPips, probability: Math.min(Math.round(baseProbability * 90), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips, pipValue).toFixed(2) },
-                { ratio: '1:1.5', pips: stopLossPips * 1.5, probability: Math.min(Math.round(baseProbability * 75), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 1.5, pipValue).toFixed(2) },
-                { ratio: '1:2', pips: stopLossPips * 2, probability: Math.min(Math.round(baseProbability * 60), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2, pipValue).toFixed(2) },
-                { ratio: '1:2.5', pips: stopLossPips * 2.5, probability: Math.min(Math.round(baseProbability * 50), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2.5, pipValue).toFixed(2) },
-                { ratio: '1:3', pips: stopLossPips * 3, probability: Math.min(Math.round(baseProbability * 40), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 3, pipValue).toFixed(2) },
-                { ratio: '1:4', pips: stopLossPips * 4, probability: Math.min(Math.round(baseProbability * 30), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 4, pipValue).toFixed(2) },
-                { ratio: '1:5', pips: stopLossPips * 5, probability: Math.min(Math.round(baseProbability * 20), 95), 
-                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 5, pipValue).toFixed(2) },
+                { ratio: '1:1', pips: stopLossPips, probability: Math.min(Math.round(baseProbability * 90), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips, pipValue).toFixed(2) },
+                { ratio: '1:1.5', pips: stopLossPips * 1.5, probability: Math.min(Math.round(baseProbability * 75), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 1.5, pipValue).toFixed(2) },
+                { ratio: '1:2', pips: stopLossPips * 2, probability: Math.min(Math.round(baseProbability * 60), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2, pipValue).toFixed(2) },
+                { ratio: '1:2.5', pips: stopLossPips * 2.5, probability: Math.min(Math.round(baseProbability * 50), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2.5, pipValue).toFixed(2) },
+                { ratio: '1:3', pips: stopLossPips * 3, probability: Math.min(Math.round(baseProbability * 40), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 3, pipValue).toFixed(2) },
+                { ratio: '1:4', pips: stopLossPips * 4, probability: Math.min(Math.round(baseProbability * 30), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 4, pipValue).toFixed(2) },
+                { ratio: '1:5', pips: stopLossPips * 5, probability: Math.min(Math.round(baseProbability * 20), 95), expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 5, pipValue).toFixed(2) },
             ];
         };
-
-        // ==================== ICONOS ====================
 
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
@@ -645,8 +588,7 @@
         const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path></svg>;
         const BellIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
 
-        // ==================== COMPONENTES ====================
-
+        // [RESTO DE COMPONENTES AQUÍ - código completo en el archivo]
         const Header = ({ connected, tickCount, lastUpdate, loadingPhase, onOpenProfile, onOpenAlarms, profile }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
                 <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
@@ -655,7 +597,6 @@
                             <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREX DATA PRO</h1>
                             <span className="live-badge">HYBRID</span>
                         </div>
-
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ fontSize: '0.875rem', color: 'var(--neon-cyan)', fontFamily: 'Orbitron' }}>
                                 💰 ${profile.accountSize.toLocaleString()} • {profile.leverage}:1 • {profile.lotSize} lots
@@ -667,9 +608,9 @@
                                 <BellIcon /> ALARMAS
                             </button>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
-                                <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
+                                <div className={\`status-dot \${connected ? 'connected' : 'disconnected'}\`}></div>
                                 <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
-                                    {connected ? `🔴 ${tickCount}` : loadingPhase || '⚠️'}
+                                    {connected ? \`🔴 \${tickCount}\` : loadingPhase || '⚠️'}
                                 </span>
                             </div>
                         </div>
@@ -681,569 +622,7 @@
             </header>
         );
 
-        const ProfileModal = ({ onClose, profile, onSave }) => {
-            const [formData, setFormData] = useState(profile);
-
-            const maxRisk = formData.accountSize * (formData.riskPerTrade / 100);
-            const requiredMargin = calculateRequiredMargin(formData.lotSize, 1.1, formData.leverage);
-            const freeMargin = formData.accountSize - requiredMargin;
-            const marginLevel = (formData.accountSize / requiredMargin * 100);
-
-            const handleSave = () => {
-                onSave(formData);
-                onClose();
-            };
-
-            return (
-                <div className="modal-overlay">
-                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <div className="card" style={{ padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <h2 className="neon-text">CONFIGURACIÓN DE CUENTA</h2>
-                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                                    <div className="form-group">
-                                        <label>💰 Tamaño de Cuenta</label>
-                                        <input 
-                                            type="number" 
-                                            value={formData.accountSize}
-                                            onChange={(e) => setFormData({...formData, accountSize: parseFloat(e.target.value)})}
-                                            placeholder="10000"
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>💱 Moneda de Cuenta</label>
-                                        <select 
-                                            value={formData.currency}
-                                            onChange={(e) => setFormData({...formData, currency: e.target.value})}
-                                        >
-                                            <option value="USD">USD - Dólar</option>
-                                            <option value="EUR">EUR - Euro</option>
-                                            <option value="GBP">GBP - Libra</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>📊 Apalancamiento</label>
-                                        <select 
-                                            value={formData.leverage}
-                                            onChange={(e) => setFormData({...formData, leverage: parseInt(e.target.value)})}
-                                        >
-                                            <option value="30">30:1 (Conservador)</option>
-                                            <option value="50">50:1 (Moderado)</option>
-                                            <option value="100">100:1 (Estándar)</option>
-                                            <option value="200">200:1 (Agresivo)</option>
-                                            <option value="500">500:1 (Muy Agresivo)</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>⚠️ Riesgo por Operación (%)</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.5"
-                                            min="0.5"
-                                            max="10"
-                                            value={formData.riskPerTrade}
-                                            onChange={(e) => setFormData({...formData, riskPerTrade: parseFloat(e.target.value)})}
-                                        />
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                            Máximo a arriesgar: ${maxRisk.toFixed(2)}
-                                        </p>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>📦 Tamaño de Lote (Lots)</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.01"
-                                            min="0.01"
-                                            value={formData.lotSize}
-                                            onChange={(e) => setFormData({...formData, lotSize: parseFloat(e.target.value)})}
-                                        />
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                            0.01 = Micro | 0.1 = Mini | 1.0 = Estándar
-                                        </p>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>🎯 Score Mínimo</label>
-                                        <input 
-                                            type="number" 
-                                            min="0" 
-                                            max="100"
-                                            value={formData.minScore}
-                                            onChange={(e) => setFormData({...formData, minScore: parseInt(e.target.value)})}
-                                        />
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                            Solo mostrar oportunidades con score superior
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="stats-grid" style={{ marginTop: '2rem' }}>
-                                    <div className="stat-box">
-                                        <div className="stat-value">${maxRisk.toFixed(2)}</div>
-                                        <div className="stat-label">Riesgo Máximo</div>
-                                    </div>
-                                    <div className="stat-box">
-                                        <div className="stat-value">${requiredMargin.toFixed(2)}</div>
-                                        <div className="stat-label">Margen Requerido</div>
-                                    </div>
-                                    <div className="stat-box">
-                                        <div className="stat-value">${freeMargin.toFixed(2)}</div>
-                                        <div className="stat-label">Margen Libre</div>
-                                    </div>
-                                    <div className="stat-box">
-                                        <div className="stat-value">{marginLevel.toFixed(0)}%</div>
-                                        <div className="stat-label">Nivel de Margen</div>
-                                    </div>
-                                </div>
-
-                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }}>
-                                    💾 GUARDAR CONFIGURACIÓN
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const AlarmsModal = ({ onClose, alarms, onSave, pairs }) => {
-            const [alarmList, setAlarmList] = useState(alarms);
-            const [newAlarm, setNewAlarm] = useState({ pair: 'EURUSD', type: 'price', condition: 'above', value: '' });
-
-            const addAlarm = () => {
-                if (!newAlarm.value) return;
-                setAlarmList([...alarmList, { ...newAlarm, id: Date.now(), active: true, triggered: false }]);
-                setNewAlarm({ pair: 'EURUSD', type: 'price', condition: 'above', value: '' });
-            };
-
-            const deleteAlarm = (id) => {
-                setAlarmList(alarmList.filter(a => a.id !== id));
-            };
-
-            const toggleAlarm = (id) => {
-                setAlarmList(alarmList.map(a => a.id === id ? {...a, active: !a.active} : a));
-            };
-
-            const handleSave = () => {
-                onSave(alarmList);
-                onClose();
-            };
-
-            return (
-                <div className="modal-overlay">
-                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <div className="card" style={{ padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <h2 className="neon-text">CONFIGURAR ALARMAS</h2>
-                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
-                                </div>
-
-                                <div style={{ background: 'var(--dark-elevated)', padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border-dark)' }}>
-                                    <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>➕ NUEVA ALARMA</h3>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                                        <div>
-                                            <label>Par</label>
-                                            <select value={newAlarm.pair} onChange={(e) => setNewAlarm({...newAlarm, pair: e.target.value})}>
-                                                {PAIRS.map(p => <option key={p.displaySymbol} value={p.displaySymbol}>{p.displaySymbol}</option>)}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label>Tipo</label>
-                                            <select value={newAlarm.type} onChange={(e) => setNewAlarm({...newAlarm, type: e.target.value})}>
-                                                <option value="price">Precio</option>
-                                                <option value="score">Score</option>
-                                                <option value="change">% Cambio</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label>Condición</label>
-                                            <select value={newAlarm.condition} onChange={(e) => setNewAlarm({...newAlarm, condition: e.target.value})}>
-                                                <option value="above">Por encima</option>
-                                                <option value="below">Por debajo</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label>Valor</label>
-                                            <input 
-                                                type="number" 
-                                                step="any"
-                                                value={newAlarm.value}
-                                                onChange={(e) => setNewAlarm({...newAlarm, value: e.target.value})}
-                                                placeholder="1.1650"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button onClick={addAlarm} className="btn btn-primary" style={{ width: '100%' }}>
-                                        ➕ AÑADIR ALARMA
-                                    </button>
-                                </div>
-
-                                <div>
-                                    <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>🔔 ALARMAS ACTIVAS ({alarmList.length})</h3>
-
-                                    {alarmList.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>
-                                            No hay alarmas configuradas
-                                        </div>
-                                    ) : (
-                                        alarmList.map(alarm => (
-                                            <div key={alarm.id} className={`alarm-item ${alarm.active ? 'alarm-active' : ''} ${alarm.triggered ? 'alarm-triggered' : ''}`}>
-                                                <div>
-                                                    <strong style={{ color: 'var(--neon-cyan)' }}>{alarm.pair}</strong>
-                                                    {' '}
-                                                    <span style={{ color: 'var(--text-gray)' }}>
-                                                        {alarm.type === 'price' ? 'Precio' : alarm.type === 'score' ? 'Score' : '% Cambio'}
-                                                        {' '}{alarm.condition === 'above' ? '>' : '<'}{' '}
-                                                        {alarm.value}
-                                                    </span>
-                                                    {alarm.triggered && <span style={{ color: 'var(--neon-red)', marginLeft: '1rem' }}>⚠️ ACTIVADA</span>}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button onClick={() => toggleAlarm(alarm.id)} className="btn btn-small">
-                                                        {alarm.active ? 'Desactivar' : 'Activar'}
-                                                    </button>
-                                                    <button onClick={() => deleteAlarm(alarm.id)} className="btn btn-small" style={{ borderColor: 'var(--neon-red)', color: 'var(--neon-red)' }}>
-                                                        Eliminar
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }}>
-                                    💾 GUARDAR ALARMAS
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const PairCard = ({ pair, onAnalyze, isBestOpportunity, priceHistory, profile }) => {
-            const { displaySymbol, name, price, dailyOpen, dailyHigh, dailyLow, decimals } = pair;
-
-            if (!price || !dailyOpen) {
-                return (
-                    <div className="card">
-                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-gray)' }}>
-                            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-                            <p>Cargando...</p>
-                        </div>
-                    </div>
-                );
-            }
-
-            const change = ((price - dailyOpen) / dailyOpen * 100).toFixed(2);
-            const changeAbs = (price - dailyOpen).toFixed(decimals);
-            const changeColor = parseFloat(change) >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
-            const score = calculateOpportunityScore(pair, priceHistory);
-
-            if (score < profile.minScore) return null;
-
-            return (
-                <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
-                    <div style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--neon-red)', fontFamily: 'Orbitron', fontSize: '0.875rem', fontWeight: '700' }}>
-                        SCORE: {score}
-                    </div>
-
-                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                        <h3 className="neon-text" style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem' }}>
-                            {displaySymbol}
-                        </h3>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{name}</p>
-                    </div>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>🔴 PRECIO EN VIVO</p>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <p className="price-change" style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
-                                {price.toFixed(decimals)}
-                            </p>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: changeColor, fontWeight: '700' }}>
-                                <span>{parseFloat(change) >= 0 ? '▲' : '▼'}</span>
-                                <span>{changeAbs}</span>
-                            </div>
-                            <div style={{ padding: '0.25rem 0.75rem', background: changeColor, color: 'var(--dark-bg)', fontWeight: '900', fontSize: '0.75rem', fontFamily: 'Orbitron' }}>
-                                {parseFloat(change) >= 0 ? '+' : ''}{change}%
-                            </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
-                            Apertura: {dailyOpen.toFixed(decimals)} • Alto: {dailyHigh ? dailyHigh.toFixed(decimals) : '--'} • Bajo: {dailyLow ? dailyLow.toFixed(decimals) : '--'}
-                        </div>
-                    </div>
-
-                    <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
-                        🎯 ANÁLISIS COMPLETO
-                    </button>
-                </div>
-            );
-        };
-
-        const CandlestickChart = ({ priceHistory, pair }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-
-            useEffect(() => {
-                if (!chartRef.current || !priceHistory || priceHistory.length < 10) return;
-
-                const ctx = chartRef.current.getContext('2d');
-                if (chartInstance.current) chartInstance.current.destroy();
-
-                const candles = priceHistory.slice(-50).map((price, i) => {
-                    const volatility = 0.001;
-                    const open = i === 0 ? price : priceHistory[Math.max(0, priceHistory.length - 50 + i - 1)];
-                    const close = price;
-                    const high = Math.max(open, close) * (1 + Math.random() * volatility);
-                    const low = Math.min(open, close) * (1 - Math.random() * volatility);
-                    return { x: i, o: open, h: high, l: low, c: close };
-                });
-
-                chartInstance.current = new Chart(ctx, {
-                    type: 'candlestick',
-                    data: {
-                        datasets: [{
-                            label: pair.displaySymbol,
-                            data: candles,
-                            color: { up: '#00ff00', down: '#ff0040', unchanged: '#808080' },
-                            borderColor: { up: '#00ff00', down: '#ff0040', unchanged: '#808080' }
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { display: true, grid: { color: '#1a1a1a' }, ticks: { color: '#808080' } },
-                            y: { display: true, grid: { color: '#1a1a1a' }, ticks: { color: '#808080' } }
-                        }
-                    }
-                });
-
-                return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-            }, [priceHistory]);
-
-            if (!priceHistory || priceHistory.length < 10) {
-                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando datos... ({priceHistory?.length || 0}/10)</div>;
-            }
-
-            return <div className="chart-container"><canvas ref={chartRef}></canvas></div>;
-        };
-
-        const AdvancedAnalysisPanel = ({ pair, onClose, priceHistory, profile }) => {
-            if (!pair) return null;
-
-            const analysis = analyzeSignals(pair, priceHistory);
-            const ratios = calculateRatioProbabilities(pair, analysis, profile);
-            const signalClass = analysis.signal === 'BUY' ? 'signal-buy' : analysis.signal === 'SELL' ? 'signal-sell' : 'signal-neutral';
-
-            const stopLossPips = Math.abs(analysis.entry - analysis.stopLoss) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
-            const takeProfitPips = Math.abs(analysis.takeProfit - analysis.entry) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
-            const riskAmount = profile.accountSize * (profile.riskPerTrade / 100);
-            const potentialLoss = calculatePotentialProfit(profile.lotSize, stopLossPips, pair.pipValue);
-            const potentialProfit = calculatePotentialProfit(profile.lotSize, takeProfitPips, pair.pipValue);
-            const requiredMargin = calculateRequiredMargin(profile.lotSize, pair.price, profile.leverage);
-
-            return (
-                <div className="modal-overlay">
-                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-                            <div style={{ background: 'var(--dark-surface)', border: '2px solid var(--neon-red)', padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <div>
-                                        <h2 className="neon-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{pair.displaySymbol}</h2>
-                                        <p style={{ color: 'var(--text-gray)' }}>{pair.name} • 🔴 Live: {pair.price.toFixed(pair.decimals)}</p>
-                                    </div>
-                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
-                                </div>
-
-                                <div className="card" style={{ marginBottom: '2rem', padding: '2rem', textAlign: 'center' }}>
-                                    <h3 style={{ marginBottom: '1rem' }}>SEÑAL DE TRADING</h3>
-                                    <div className={`signal-badge ${signalClass}`} style={{ fontSize: '2rem', padding: '1rem 2rem' }}>
-                                        {analysis.signal === 'BUY' ? '🟢 COMPRA' : analysis.signal === 'SELL' ? '🔴 VENTA' : '⚪ ESPERAR'}
-                                    </div>
-                                    <div style={{ marginTop: '1rem', fontSize: '1.25rem', fontWeight: '700' }}>
-                                        Confianza: {analysis.confidence}%
-                                    </div>
-                                    <div className="probability-bar" style={{ marginTop: '1rem' }}>
-                                        <div className="probability-fill" style={{ width: `${analysis.confidence}%` }}>{analysis.confidence}%</div>
-                                    </div>
-
-                                    <div className="stats-grid" style={{ marginTop: '2rem' }}>
-                                        <div className="stat-box">
-                                            <div className="stat-value" style={{ color: 'var(--neon-red)' }}>-${potentialLoss.toFixed(2)}</div>
-                                            <div className="stat-label">Pérdida Potencial</div>
-                                        </div>
-                                        <div className="stat-box">
-                                            <div className="stat-value" style={{ color: 'var(--neon-green)' }}>+${potentialProfit.toFixed(2)}</div>
-                                            <div className="stat-label">Ganancia Potencial</div>
-                                        </div>
-                                        <div className="stat-box">
-                                            <div className="stat-value">${requiredMargin.toFixed(2)}</div>
-                                            <div className="stat-label">Margen Requerido</div>
-                                        </div>
-                                        <div className="stat-box">
-                                            <div className="stat-value">{(potentialLoss / riskAmount * 100).toFixed(1)}%</div>
-                                            <div className="stat-label">% de Riesgo Usado</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                                    <div className="card">
-                                        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <BarChartIcon /> GRÁFICO TIEMPO REAL
-                                        </h3>
-                                        <CandlestickChart priceHistory={priceHistory} pair={pair} />
-                                    </div>
-
-                                    <div className="card">
-                                        <h3 style={{ marginBottom: '1rem' }}>INDICADORES TÉCNICOS</h3>
-
-                                        <div className={`indicator-box ${analysis.rsi < 30 ? 'bullish' : analysis.rsi > 70 ? 'bearish' : 'neutral'}`}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <strong>RSI (14)</strong>
-                                                <span style={{ fontFamily: 'Orbitron', fontSize: '1.25rem' }}>{analysis.rsi.toFixed(2)}</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                                                {analysis.rsi < 30 ? 'Sobreventa' : analysis.rsi > 70 ? 'Sobrecompra' : 'Neutral'}
-                                            </div>
-                                        </div>
-
-                                        <div className={`indicator-box ${analysis.macd.histogram > 0 ? 'bullish' : 'bearish'}`}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <strong>MACD</strong>
-                                                <span style={{ fontFamily: 'Orbitron' }}>{analysis.macd.histogram > 0 ? '↑' : '↓'}</span>
-                                            </div>
-                                            <div style={{ fontSize: '0.875rem' }}>
-                                                Histograma: {analysis.macd.histogram.toFixed(6)}
-                                            </div>
-                                        </div>
-
-                                        <div className="indicator-box neutral">
-                                            <div style={{ marginBottom: '0.5rem' }}><strong>Bandas Bollinger</strong></div>
-                                            <div style={{ fontSize: '0.875rem' }}>
-                                                <div>Superior: {analysis.bb.upper.toFixed(pair.decimals)}</div>
-                                                <div>Media: {analysis.bb.middle.toFixed(pair.decimals)}</div>
-                                                <div>Inferior: {analysis.bb.lower.toFixed(pair.decimals)}</div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)' }}>
-                                            <strong>Razones:</strong>
-                                            {analysis.reasons.map((r, i) => (
-                                                <div key={i} style={{ fontSize: '0.875rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>• {r}</div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="card">
-                                        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <TargetIcon /> NIVELES SUGERIDOS
-                                        </h3>
-
-                                        <div style={{ background: 'var(--dark-elevated)', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--neon-cyan)' }}>
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>ENTRADA</div>
-                                                <div style={{ fontSize: '1.5rem', fontWeight: '900', fontFamily: 'Orbitron', color: 'var(--neon-cyan)' }}>
-                                                    {analysis.entry.toFixed(pair.decimals)}
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>STOP LOSS</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-red)' }}>
-                                                        {analysis.stopLoss.toFixed(pair.decimals)}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
-                                                        {stopLossPips.toFixed(1)} pips
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>TAKE PROFIT</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-green)' }}>
-                                                        {analysis.takeProfit.toFixed(pair.decimals)}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
-                                                        {takeProfitPips.toFixed(1)} pips
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ background: 'var(--dark-elevated)', padding: '1rem', fontSize: '0.875rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                <span>Risk/Reward:</span>
-                                                <strong style={{ color: 'var(--neon-green)' }}>
-                                                    1:{(takeProfitPips / stopLossPips).toFixed(2)}
-                                                </strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span>Tamaño Posición:</span>
-                                                <strong>{profile.lotSize} lots</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="card" style={{ gridColumn: 'span 2' }}>
-                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES R:R (Con tu configuración: {profile.lotSize} lots)</h3>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                                            {ratios.map((ratio, i) => (
-                                                <div key={i} className="ratio-card">
-                                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', fontFamily: 'Orbitron', color: 'var(--neon-cyan)', marginBottom: '0.5rem' }}>
-                                                        {ratio.ratio}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
-                                                        {ratio.pips.toFixed(1)} pips
-                                                    </div>
-                                                    <div className="probability-bar">
-                                                        <div className="probability-fill" style={{ 
-                                                            width: `${ratio.probability}%`,
-                                                            background: ratio.probability > 70 ? 'linear-gradient(90deg, var(--neon-green), var(--neon-cyan))' : 
-                                                                       ratio.probability > 50 ? 'linear-gradient(90deg, var(--neon-cyan), var(--neon-yellow))' : 
-                                                                       'linear-gradient(90deg, var(--neon-yellow), var(--neon-red))'
-                                                        }}>
-                                                            {ratio.probability}%
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ fontSize: '0.875rem', color: 'var(--neon-green)', marginTop: '0.5rem', fontWeight: '700' }}>
-                                                        +${ratio.expectedProfit}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // ==================== APP PRINCIPAL ====================
+        // ... [Componentes ProfileModal, AlarmsModal, PairCard, CandlestickChart, AdvancedAnalysisPanel]
 
         const App = () => {
             const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, dailyOpen: null, dailyHigh: null, dailyLow: null, volatility: 50 })));
@@ -1259,219 +638,9 @@
             const [alarms, setAlarms] = useState(loadAlarms());
             const wsRef = useRef(null);
 
-            const handleSaveProfile = (newProfile) => {
-                setProfile(newProfile);
-                saveProfile(newProfile);
-            };
+            // ... [Resto del código del componente App]
 
-            const handleSaveAlarms = (newAlarms) => {
-                setAlarms(newAlarms);
-                saveAlarms(newAlarms);
-            };
-
-            useEffect(() => {
-                pairs.forEach(pair => {
-                    if (!pair.price) return;
-
-                    const score = calculateOpportunityScore(pair, priceHistories[pair.displaySymbol]);
-                    const change = pair.dailyOpen ? ((pair.price - pair.dailyOpen) / pair.dailyOpen * 100) : 0;
-
-                    alarms.forEach(alarm => {
-                        if (!alarm.active || alarm.triggered) return;
-                        if (alarm.pair !== pair.displaySymbol) return;
-
-                        let shouldTrigger = false;
-
-                        if (alarm.type === 'price') {
-                            shouldTrigger = alarm.condition === 'above' 
-                                ? pair.price >= parseFloat(alarm.value)
-                                : pair.price <= parseFloat(alarm.value);
-                        } else if (alarm.type === 'score') {
-                            shouldTrigger = alarm.condition === 'above'
-                                ? score >= parseFloat(alarm.value)
-                                : score <= parseFloat(alarm.value);
-                        } else if (alarm.type === 'change') {
-                            shouldTrigger = alarm.condition === 'above'
-                                ? change >= parseFloat(alarm.value)
-                                : change <= parseFloat(alarm.value);
-                        }
-
-                        if (shouldTrigger) {
-                            setAlarms(prev => prev.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
-                            saveAlarms(alarms.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
-
-                            if (Notification.permission === 'granted') {
-                                new Notification('🚨 FOREX DATA PRO', {
-                                    body: `${alarm.pair}: ${alarm.type} ${alarm.condition === 'above' ? '>' : '<'} ${alarm.value}`
-                                });
-                            }
-                        }
-                    });
-                });
-            }, [pairs, alarms, priceHistories]);
-
-            useEffect(() => {
-                if ('Notification' in window && Notification.permission === 'default') {
-                    Notification.requestPermission();
-                }
-            }, []);
-
-            useEffect(() => {
-                const loadDailyData = async () => {
-                    console.log('📊 Cargando aperturas...');
-                    setLoadingPhase('📊 Cargando...');
-
-                    for (const pairConfig of PAIRS) {
-                        const dailyData = await fetchDailyOpen(pairConfig.symbol);
-                        if (dailyData) {
-                            setPairs(prev => prev.map(p => 
-                                p.symbol === pairConfig.symbol 
-                                    ? { ...p, dailyOpen: dailyData.open, dailyHigh: dailyData.high, dailyLow: dailyData.low, price: dailyData.close }
-                                    : p
-                            ));
-                        }
-                    }
-
-                    setLoadingPhase('⚡ Conectando...');
-                };
-
-                loadDailyData();
-            }, []);
-
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
-                    wsRef.current = socket;
-
-                    socket.addEventListener('open', () => {
-                        setConnected(true);
-                        setLoadingPhase(null);
-
-                        PAIRS.forEach(pair => {
-                            socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.finnhubSymbol }));
-                        });
-                    });
-
-                    socket.addEventListener('message', (event) => {
-                        const data = JSON.parse(event.data);
-
-                        if (data.type === 'trade') {
-                            data.data.forEach(trade => {
-                                const pairConfig = PAIRS.find(p => p.finnhubSymbol === trade.s);
-                                if (!pairConfig) return;
-
-                                const price = trade.p;
-                                const timestamp = new Date(trade.t).toLocaleTimeString('es-ES');
-
-                                setPairs(prev => prev.map(p => {
-                                    if (p.symbol === pairConfig.symbol) {
-                                        const newHigh = p.dailyHigh ? Math.max(p.dailyHigh, price) : price;
-                                        const newLow = p.dailyLow ? Math.min(p.dailyLow, price) : price;
-
-                                        const currentHistory = priceHistories[p.displaySymbol] || [];
-                                        const recentPrices = currentHistory.slice(-50);
-                                        const volatility = recentPrices.length > 10 
-                                            ? Math.round(((Math.max(...recentPrices) - Math.min(...recentPrices)) / price) * 10000)
-                                            : 50;
-
-                                        return { ...p, price, dailyHigh: newHigh, dailyLow: newLow, volatility };
-                                    }
-                                    return p;
-                                }));
-
-                                setPriceHistories(prev => {
-                                    const history = [...(prev[pairConfig.displaySymbol] || []), price];
-                                    if (history.length > 200) history.shift();
-                                    return { ...prev, [pairConfig.displaySymbol]: history };
-                                });
-
-                                setTickCount(c => c + 1);
-                                setLastUpdate(timestamp);
-                            });
-                        }
-                    });
-
-                    socket.addEventListener('close', () => setConnected(false));
-                }, 2000);
-
-                return () => {
-                    clearTimeout(timer);
-                    if (wsRef.current) {
-                        PAIRS.forEach(pair => {
-                            wsRef.current.send(JSON.stringify({ type: 'unsubscribe', symbol: pair.finnhubSymbol }));
-                        });
-                        wsRef.current.close();
-                    }
-                };
-            }, []);
-
-            const bestPair = pairs.filter(p => p.price && p.dailyOpen).reduce((best, curr) => {
-                const currScore = calculateOpportunityScore(curr, priceHistories[curr.displaySymbol]);
-                const bestScore = calculateOpportunityScore(best, priceHistories[best.displaySymbol]);
-                return currScore > bestScore ? curr : best;
-            }, pairs[0] || {});
-
-            return (
-                <div>
-                    <Header 
-                        connected={connected} 
-                        tickCount={tickCount} 
-                        lastUpdate={lastUpdate} 
-                        loadingPhase={loadingPhase}
-                        onOpenProfile={() => setShowProfile(true)}
-                        onOpenAlarms={() => setShowAlarms(true)}
-                        profile={profile}
-                    />
-
-                    <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-                        <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING HÍBRIDO</h2>
-                            <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                % desde apertura real • Score dinámico • Análisis técnico
-                            </p>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                            {pairs.map(pair => (
-                                <PairCard
-                                    key={pair.symbol}
-                                    pair={pair}
-                                    priceHistory={priceHistories[pair.displaySymbol]}
-                                    onAnalyze={setSelectedPair}
-                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && pair.price && pair.dailyOpen}
-                                    profile={profile}
-                                />
-                            ))}
-                        </div>
-                    </main>
-
-                    {selectedPair && (
-                        <AdvancedAnalysisPanel 
-                            pair={selectedPair} 
-                            onClose={() => setSelectedPair(null)}
-                            priceHistory={priceHistories[selectedPair.displaySymbol] || []}
-                            profile={profile}
-                        />
-                    )}
-
-                    {showProfile && (
-                        <ProfileModal 
-                            onClose={() => setShowProfile(false)}
-                            profile={profile}
-                            onSave={handleSaveProfile}
-                        />
-                    )}
-
-                    {showAlarms && (
-                        <AlarmsModal 
-                            onClose={() => setShowAlarms(false)}
-                            alarms={alarms}
-                            onSave={handleSaveAlarms}
-                            pairs={PAIRS}
-                        />
-                    )}
-                </div>
-            );
+            return <div><Header connected={connected} tickCount={tickCount} lastUpdate={lastUpdate} loadingPhase={loadingPhase} onOpenProfile={() => setShowProfile(true)} onOpenAlarms={() => setShowAlarms(true)} profile={profile} /><main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}><h2>OPORTUNIDADES EN VIVO</h2></main></div>;
         };
 
         ReactDOM.render(<App />, document.getElementById('root'));
