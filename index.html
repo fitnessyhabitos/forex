@@ -323,6 +323,33 @@
             animation: neonPulse 1s infinite;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-box {
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--neon-cyan);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+        }
+
         @media (max-width: 768px) {
             .best-opportunity { margin-top: 3rem; }
         }
@@ -343,11 +370,11 @@
         const FINNHUB_WS = 'wss://ws.finnhub.io';
 
         const PAIRS = [
-            { symbol: 'EUR/USD', finnhubSymbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5 },
-            { symbol: 'GBP/USD', finnhubSymbol: 'OANDA:GBP_USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar', decimals: 5 },
-            { symbol: 'USD/JPY', finnhubSymbol: 'OANDA:USD_JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen', decimals: 3 },
-            { symbol: 'EUR/JPY', finnhubSymbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3 },
-            { symbol: 'XAU/USD', finnhubSymbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2 },
+            { symbol: 'EUR/USD', finnhubSymbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5, pipValue: 10 },
+            { symbol: 'GBP/USD', finnhubSymbol: 'OANDA:GBP_USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar', decimals: 5, pipValue: 10 },
+            { symbol: 'USD/JPY', finnhubSymbol: 'OANDA:USD_JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen', decimals: 3, pipValue: 9.09 },
+            { symbol: 'EUR/JPY', finnhubSymbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3, pipValue: 9.09 },
+            { symbol: 'XAU/USD', finnhubSymbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2, pipValue: 1 },
         ];
 
         // ==================== LOCALSTORAGE ====================
@@ -355,11 +382,11 @@
         const loadProfile = () => {
             const saved = localStorage.getItem('forexDataProProfile');
             return saved ? JSON.parse(saved) : {
-                name: '',
-                email: '',
-                experience: 'beginner',
-                riskTolerance: 'medium',
-                preferredPairs: [],
+                accountSize: 10000,
+                currency: 'USD',
+                leverage: 100,
+                riskPerTrade: 2,
+                lotSize: 0.1,
                 minScore: 60
             };
         };
@@ -375,6 +402,23 @@
 
         const saveAlarms = (alarms) => {
             localStorage.setItem('forexDataProAlarms', JSON.stringify(alarms));
+        };
+
+        // ==================== CÁLCULOS DE TRADING ====================
+
+        const calculatePositionSize = (accountSize, riskPercent, stopLossPips, pipValue) => {
+            const riskAmount = accountSize * (riskPercent / 100);
+            const positionSize = riskAmount / (stopLossPips * pipValue);
+            return positionSize;
+        };
+
+        const calculatePotentialProfit = (lotSize, pips, pipValue) => {
+            return lotSize * pips * pipValue;
+        };
+
+        const calculateRequiredMargin = (lotSize, price, leverage) => {
+            const contractSize = 100000; // Standard lot
+            return (lotSize * contractSize * price) / leverage;
         };
 
         // ==================== FUNCIONES API ====================
@@ -566,21 +610,30 @@
             return { signal, confidence: Math.min(confidence, 100), reasons, rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma10, ma20 };
         };
 
-        const calculateRatioProbabilities = (pair, analysis) => {
-            const { volatility = 50 } = pair;
+        const calculateRatioProbabilities = (pair, analysis, profile) => {
+            const { volatility = 50, pipValue = 10 } = pair;
             const { confidence } = analysis;
             const volFactor = Math.max(0.3, Math.min(1, 100 / volatility));
             const confFactor = confidence / 100;
             const baseProbability = volFactor * confFactor * 0.8;
 
+            const stopLossPips = Math.abs(analysis.entry - analysis.stopLoss) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
+
             return [
-                { ratio: '1:1', pips: 50, probability: Math.min(Math.round(baseProbability * 90), 95), expectedProfit: '500.00' },
-                { ratio: '1:1.5', pips: 75, probability: Math.min(Math.round(baseProbability * 75), 95), expectedProfit: '750.00' },
-                { ratio: '1:2', pips: 100, probability: Math.min(Math.round(baseProbability * 60), 95), expectedProfit: '1000.00' },
-                { ratio: '1:2.5', pips: 125, probability: Math.min(Math.round(baseProbability * 50), 95), expectedProfit: '1250.00' },
-                { ratio: '1:3', pips: 150, probability: Math.min(Math.round(baseProbability * 40), 95), expectedProfit: '1500.00' },
-                { ratio: '1:4', pips: 200, probability: Math.min(Math.round(baseProbability * 30), 95), expectedProfit: '2000.00' },
-                { ratio: '1:5', pips: 250, probability: Math.min(Math.round(baseProbability * 20), 95), expectedProfit: '2500.00' },
+                { ratio: '1:1', pips: stopLossPips, probability: Math.min(Math.round(baseProbability * 90), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips, pipValue).toFixed(2) },
+                { ratio: '1:1.5', pips: stopLossPips * 1.5, probability: Math.min(Math.round(baseProbability * 75), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 1.5, pipValue).toFixed(2) },
+                { ratio: '1:2', pips: stopLossPips * 2, probability: Math.min(Math.round(baseProbability * 60), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2, pipValue).toFixed(2) },
+                { ratio: '1:2.5', pips: stopLossPips * 2.5, probability: Math.min(Math.round(baseProbability * 50), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 2.5, pipValue).toFixed(2) },
+                { ratio: '1:3', pips: stopLossPips * 3, probability: Math.min(Math.round(baseProbability * 40), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 3, pipValue).toFixed(2) },
+                { ratio: '1:4', pips: stopLossPips * 4, probability: Math.min(Math.round(baseProbability * 30), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 4, pipValue).toFixed(2) },
+                { ratio: '1:5', pips: stopLossPips * 5, probability: Math.min(Math.round(baseProbability * 20), 95), 
+                  expectedProfit: calculatePotentialProfit(profile.lotSize, stopLossPips * 5, pipValue).toFixed(2) },
             ];
         };
 
@@ -589,12 +642,12 @@
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
         const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
-        const UserIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path></svg>;
         const BellIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
 
         // ==================== COMPONENTES ====================
 
-        const Header = ({ connected, tickCount, lastUpdate, loadingPhase, onOpenProfile, onOpenAlarms }) => (
+        const Header = ({ connected, tickCount, lastUpdate, loadingPhase, onOpenProfile, onOpenAlarms, profile }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
                 <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -603,9 +656,12 @@
                             <span className="live-badge">HYBRID</span>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--neon-cyan)', fontFamily: 'Orbitron' }}>
+                                💰 ${profile.accountSize.toLocaleString()} • {profile.leverage}:1 • {profile.lotSize} lots
+                            </div>
                             <button onClick={onOpenProfile} className="btn btn-small" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <UserIcon /> PERFIL
+                                <SettingsIcon /> PERFIL
                             </button>
                             <button onClick={onOpenAlarms} className="btn btn-small" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <BellIcon /> ALARMAS
@@ -613,13 +669,13 @@
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
                                 <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
                                 <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
-                                    {connected ? `🔴 ${tickCount} ticks` : loadingPhase || '⚠️ CONECTANDO...'}
+                                    {connected ? `🔴 ${tickCount}` : loadingPhase || '⚠️'}
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                        ⚡ Twelve Data (apertura) + Finnhub (tiempo real) • {lastUpdate}
+                        ⚡ Twelve Data + Finnhub • {lastUpdate}
                     </div>
                 </div>
             </header>
@@ -627,6 +683,11 @@
 
         const ProfileModal = ({ onClose, profile, onSave }) => {
             const [formData, setFormData] = useState(profile);
+
+            const maxRisk = formData.accountSize * (formData.riskPerTrade / 100);
+            const requiredMargin = calculateRequiredMargin(formData.lotSize, 1.1, formData.leverage);
+            const freeMargin = formData.accountSize - requiredMargin;
+            const marginLevel = (formData.accountSize / requiredMargin * 100);
 
             const handleSave = () => {
                 onSave(formData);
@@ -636,74 +697,115 @@
             return (
                 <div className="modal-overlay">
                     <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <div className="card" style={{ padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <h2 className="neon-text">CONFIGURAR PERFIL</h2>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <h2 className="neon-text">CONFIGURACIÓN DE CUENTA</h2>
                                     <button onClick={onClose} className="btn btn-small"><XIcon /></button>
                                 </div>
 
-                                <div className="form-group">
-                                    <label>Nombre</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        placeholder="Tu nombre"
-                                    />
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                                    <div className="form-group">
+                                        <label>💰 Tamaño de Cuenta</label>
+                                        <input 
+                                            type="number" 
+                                            value={formData.accountSize}
+                                            onChange={(e) => setFormData({...formData, accountSize: parseFloat(e.target.value)})}
+                                            placeholder="10000"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>💱 Moneda de Cuenta</label>
+                                        <select 
+                                            value={formData.currency}
+                                            onChange={(e) => setFormData({...formData, currency: e.target.value})}
+                                        >
+                                            <option value="USD">USD - Dólar</option>
+                                            <option value="EUR">EUR - Euro</option>
+                                            <option value="GBP">GBP - Libra</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>📊 Apalancamiento</label>
+                                        <select 
+                                            value={formData.leverage}
+                                            onChange={(e) => setFormData({...formData, leverage: parseInt(e.target.value)})}
+                                        >
+                                            <option value="30">30:1 (Conservador)</option>
+                                            <option value="50">50:1 (Moderado)</option>
+                                            <option value="100">100:1 (Estándar)</option>
+                                            <option value="200">200:1 (Agresivo)</option>
+                                            <option value="500">500:1 (Muy Agresivo)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>⚠️ Riesgo por Operación (%)</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.5"
+                                            min="0.5"
+                                            max="10"
+                                            value={formData.riskPerTrade}
+                                            onChange={(e) => setFormData({...formData, riskPerTrade: parseFloat(e.target.value)})}
+                                        />
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                            Máximo a arriesgar: ${maxRisk.toFixed(2)}
+                                        </p>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>📦 Tamaño de Lote (Lots)</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.01"
+                                            min="0.01"
+                                            value={formData.lotSize}
+                                            onChange={(e) => setFormData({...formData, lotSize: parseFloat(e.target.value)})}
+                                        />
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                            0.01 = Micro | 0.1 = Mini | 1.0 = Estándar
+                                        </p>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>🎯 Score Mínimo</label>
+                                        <input 
+                                            type="number" 
+                                            min="0" 
+                                            max="100"
+                                            value={formData.minScore}
+                                            onChange={(e) => setFormData({...formData, minScore: parseInt(e.target.value)})}
+                                        />
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                            Solo mostrar oportunidades con score superior
+                                        </p>
+                                    </div>
                                 </div>
 
-                                <div className="form-group">
-                                    <label>Email</label>
-                                    <input 
-                                        type="email" 
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                        placeholder="tu@email.com"
-                                    />
+                                <div className="stats-grid" style={{ marginTop: '2rem' }}>
+                                    <div className="stat-box">
+                                        <div className="stat-value">${maxRisk.toFixed(2)}</div>
+                                        <div className="stat-label">Riesgo Máximo</div>
+                                    </div>
+                                    <div className="stat-box">
+                                        <div className="stat-value">${requiredMargin.toFixed(2)}</div>
+                                        <div className="stat-label">Margen Requerido</div>
+                                    </div>
+                                    <div className="stat-box">
+                                        <div className="stat-value">${freeMargin.toFixed(2)}</div>
+                                        <div className="stat-label">Margen Libre</div>
+                                    </div>
+                                    <div className="stat-box">
+                                        <div className="stat-value">{marginLevel.toFixed(0)}%</div>
+                                        <div className="stat-label">Nivel de Margen</div>
+                                    </div>
                                 </div>
 
-                                <div className="form-group">
-                                    <label>Experiencia en Trading</label>
-                                    <select 
-                                        value={formData.experience}
-                                        onChange={(e) => setFormData({...formData, experience: e.target.value})}
-                                    >
-                                        <option value="beginner">Principiante (0-1 año)</option>
-                                        <option value="intermediate">Intermedio (1-3 años)</option>
-                                        <option value="advanced">Avanzado (3-5 años)</option>
-                                        <option value="expert">Experto (5+ años)</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Tolerancia al Riesgo</label>
-                                    <select 
-                                        value={formData.riskTolerance}
-                                        onChange={(e) => setFormData({...formData, riskTolerance: e.target.value})}
-                                    >
-                                        <option value="conservative">Conservador (R:R 1:1)</option>
-                                        <option value="medium">Moderado (R:R 1:2)</option>
-                                        <option value="aggressive">Agresivo (R:R 1:3+)</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Score Mínimo para Alertas</label>
-                                    <input 
-                                        type="number" 
-                                        min="0" 
-                                        max="100"
-                                        value={formData.minScore}
-                                        onChange={(e) => setFormData({...formData, minScore: parseInt(e.target.value)})}
-                                    />
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                        Solo se mostrarán oportunidades con score superior a este valor
-                                    </p>
-                                </div>
-
-                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%' }}>
-                                    💾 GUARDAR PERFIL
+                                <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }}>
+                                    💾 GUARDAR CONFIGURACIÓN
                                 </button>
                             </div>
                         </div>
@@ -841,7 +943,7 @@
                     <div className="card">
                         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-gray)' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-                            <p>Cargando datos...</p>
+                            <p>Cargando...</p>
                         </div>
                     </div>
                 );
@@ -852,10 +954,7 @@
             const changeColor = parseFloat(change) >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
             const score = calculateOpportunityScore(pair, priceHistory);
 
-            // Filtrar por score mínimo del perfil
-            if (score < profile.minScore) {
-                return null;
-            }
+            if (score < profile.minScore) return null;
 
             return (
                 <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
@@ -950,12 +1049,19 @@
             return <div className="chart-container"><canvas ref={chartRef}></canvas></div>;
         };
 
-        const AdvancedAnalysisPanel = ({ pair, onClose, priceHistory }) => {
+        const AdvancedAnalysisPanel = ({ pair, onClose, priceHistory, profile }) => {
             if (!pair) return null;
 
             const analysis = analyzeSignals(pair, priceHistory);
-            const ratios = calculateRatioProbabilities(pair, analysis);
+            const ratios = calculateRatioProbabilities(pair, analysis, profile);
             const signalClass = analysis.signal === 'BUY' ? 'signal-buy' : analysis.signal === 'SELL' ? 'signal-sell' : 'signal-neutral';
+
+            const stopLossPips = Math.abs(analysis.entry - analysis.stopLoss) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
+            const takeProfitPips = Math.abs(analysis.takeProfit - analysis.entry) * (pair.decimals === 5 ? 100000 : pair.decimals === 3 ? 1000 : 100);
+            const riskAmount = profile.accountSize * (profile.riskPerTrade / 100);
+            const potentialLoss = calculatePotentialProfit(profile.lotSize, stopLossPips, pair.pipValue);
+            const potentialProfit = calculatePotentialProfit(profile.lotSize, takeProfitPips, pair.pipValue);
+            const requiredMargin = calculateRequiredMargin(profile.lotSize, pair.price, profile.leverage);
 
             return (
                 <div className="modal-overlay">
@@ -980,6 +1086,25 @@
                                     </div>
                                     <div className="probability-bar" style={{ marginTop: '1rem' }}>
                                         <div className="probability-fill" style={{ width: `${analysis.confidence}%` }}>{analysis.confidence}%</div>
+                                    </div>
+
+                                    <div className="stats-grid" style={{ marginTop: '2rem' }}>
+                                        <div className="stat-box">
+                                            <div className="stat-value" style={{ color: 'var(--neon-red)' }}>-${potentialLoss.toFixed(2)}</div>
+                                            <div className="stat-label">Pérdida Potencial</div>
+                                        </div>
+                                        <div className="stat-box">
+                                            <div className="stat-value" style={{ color: 'var(--neon-green)' }}>+${potentialProfit.toFixed(2)}</div>
+                                            <div className="stat-label">Ganancia Potencial</div>
+                                        </div>
+                                        <div className="stat-box">
+                                            <div className="stat-value">${requiredMargin.toFixed(2)}</div>
+                                            <div className="stat-label">Margen Requerido</div>
+                                        </div>
+                                        <div className="stat-box">
+                                            <div className="stat-value">{(potentialLoss / riskAmount * 100).toFixed(1)}%</div>
+                                            <div className="stat-label">% de Riesgo Usado</div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1050,6 +1175,9 @@
                                                     <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-red)' }}>
                                                         {analysis.stopLoss.toFixed(pair.decimals)}
                                                     </div>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
+                                                        {stopLossPips.toFixed(1)} pips
+                                                    </div>
                                                 </div>
 
                                                 <div>
@@ -1057,22 +1185,29 @@
                                                     <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-green)' }}>
                                                         {analysis.takeProfit.toFixed(pair.decimals)}
                                                     </div>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)' }}>
+                                                        {takeProfitPips.toFixed(1)} pips
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div style={{ background: 'var(--dark-elevated)', padding: '1rem', fontSize: '0.875rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                                 <span>Risk/Reward:</span>
                                                 <strong style={{ color: 'var(--neon-green)' }}>
-                                                    1:{(Math.abs(analysis.takeProfit - analysis.entry) / Math.abs(analysis.stopLoss - analysis.entry)).toFixed(2)}
+                                                    1:{(takeProfitPips / stopLossPips).toFixed(2)}
                                                 </strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>Tamaño Posición:</span>
+                                                <strong>{profile.lotSize} lots</strong>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="card" style={{ gridColumn: 'span 2' }}>
-                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES R:R</h3>
+                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES R:R (Con tu configuración: {profile.lotSize} lots)</h3>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                                             {ratios.map((ratio, i) => (
@@ -1081,7 +1216,7 @@
                                                         {ratio.ratio}
                                                     </div>
                                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
-                                                        {ratio.pips} pips
+                                                        {ratio.pips.toFixed(1)} pips
                                                     </div>
                                                     <div className="probability-bar">
                                                         <div className="probability-fill" style={{ 
@@ -1093,8 +1228,8 @@
                                                             {ratio.probability}%
                                                         </div>
                                                     </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
-                                                        ~${ratio.expectedProfit}
+                                                    <div style={{ fontSize: '0.875rem', color: 'var(--neon-green)', marginTop: '0.5rem', fontWeight: '700' }}>
+                                                        +${ratio.expectedProfit}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1117,26 +1252,23 @@
             const [connected, setConnected] = useState(false);
             const [tickCount, setTickCount] = useState(0);
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
-            const [loadingPhase, setLoadingPhase] = useState('Inicializando...');
+            const [loadingPhase, setLoadingPhase] = useState('Init...');
             const [showProfile, setShowProfile] = useState(false);
             const [showAlarms, setShowAlarms] = useState(false);
             const [profile, setProfile] = useState(loadProfile());
             const [alarms, setAlarms] = useState(loadAlarms());
             const wsRef = useRef(null);
 
-            // Guardar perfil
             const handleSaveProfile = (newProfile) => {
                 setProfile(newProfile);
                 saveProfile(newProfile);
             };
 
-            // Guardar alarmas
             const handleSaveAlarms = (newAlarms) => {
                 setAlarms(newAlarms);
                 saveAlarms(newAlarms);
             };
 
-            // Verificar alarmas
             useEffect(() => {
                 pairs.forEach(pair => {
                     if (!pair.price) return;
@@ -1165,15 +1297,12 @@
                         }
 
                         if (shouldTrigger) {
-                            // Marcar como activada
                             setAlarms(prev => prev.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
                             saveAlarms(alarms.map(a => a.id === alarm.id ? {...a, triggered: true} : a));
 
-                            // Notificación
                             if (Notification.permission === 'granted') {
-                                new Notification('🚨 FOREX DATA PRO - Alarma Activada', {
-                                    body: `${alarm.pair}: ${alarm.type} ${alarm.condition === 'above' ? '>' : '<'} ${alarm.value}`,
-                                    icon: '/favicon.ico'
+                                new Notification('🚨 FOREX DATA PRO', {
+                                    body: `${alarm.pair}: ${alarm.type} ${alarm.condition === 'above' ? '>' : '<'} ${alarm.value}`
                                 });
                             }
                         }
@@ -1181,18 +1310,16 @@
                 });
             }, [pairs, alarms, priceHistories]);
 
-            // Solicitar permisos de notificación
             useEffect(() => {
                 if ('Notification' in window && Notification.permission === 'default') {
                     Notification.requestPermission();
                 }
             }, []);
 
-            // FASE 1: Cargar precios de apertura
             useEffect(() => {
                 const loadDailyData = async () => {
-                    console.log('📊 FASE 1: Cargando precios de apertura (Twelve Data)');
-                    setLoadingPhase('📊 Cargando apertura...');
+                    console.log('📊 Cargando aperturas...');
+                    setLoadingPhase('📊 Cargando...');
 
                     for (const pairConfig of PAIRS) {
                         const dailyData = await fetchDailyOpen(pairConfig.symbol);
@@ -1202,26 +1329,21 @@
                                     ? { ...p, dailyOpen: dailyData.open, dailyHigh: dailyData.high, dailyLow: dailyData.low, price: dailyData.close }
                                     : p
                             ));
-                            console.log(`✅ ${pairConfig.displaySymbol}: Open=${dailyData.open}`);
                         }
                     }
 
-                    console.log('✅ FASE 1 COMPLETADA');
                     setLoadingPhase('⚡ Conectando...');
                 };
 
                 loadDailyData();
             }, []);
 
-            // FASE 2: WebSocket
             useEffect(() => {
                 const timer = setTimeout(() => {
-                    console.log('🚀 FASE 2: WebSocket (Finnhub)');
                     const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
                     wsRef.current = socket;
 
                     socket.addEventListener('open', () => {
-                        console.log('✅ WebSocket CONECTADO');
                         setConnected(true);
                         setLoadingPhase(null);
 
@@ -1269,14 +1391,7 @@
                         }
                     });
 
-                    socket.addEventListener('close', () => {
-                        console.log('❌ WebSocket desconectado');
-                        setConnected(false);
-                    });
-
-                    socket.addEventListener('error', (error) => {
-                        console.error('⚠️ Error WebSocket:', error);
-                    });
+                    socket.addEventListener('close', () => setConnected(false));
                 }, 2000);
 
                 return () => {
@@ -1305,13 +1420,14 @@
                         loadingPhase={loadingPhase}
                         onOpenProfile={() => setShowProfile(true)}
                         onOpenAlarms={() => setShowAlarms(true)}
+                        profile={profile}
                     />
 
                     <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                         <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING HÍBRIDO EN TIEMPO REAL</h2>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING HÍBRIDO</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                🔴 % desde apertura real del mercado • Score dinámico • Análisis técnico profesional
+                                % desde apertura real • Score dinámico • Análisis técnico
                             </p>
                         </div>
 
@@ -1334,6 +1450,7 @@
                             pair={selectedPair} 
                             onClose={() => setSelectedPair(null)}
                             priceHistory={priceHistories[selectedPair.displaySymbol] || []}
+                            profile={profile}
                         />
                     )}
 
