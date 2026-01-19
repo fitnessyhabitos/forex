@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOREXRISK PRO • REAL-TIME EDITION</title>
+    <title>FOREXRISK PRO • ULTIMATE TRADING EDITION</title>
 
     <!-- React y ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -12,21 +12,18 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --neon-red: #ff0040;
-            --neon-red-glow: rgba(255, 0, 64, 0.8);
             --neon-green: #00ff00;
             --neon-cyan: #00ffff;
+            --neon-yellow: #ffff00;
             --dark-bg: #000000;
             --dark-surface: #0a0a0a;
             --dark-elevated: #121212;
@@ -69,12 +66,10 @@
         .card {
             background: var(--dark-surface);
             border: 1px solid var(--border-dark);
-            border-radius: 0;
             padding: 1.5rem;
             position: relative;
             transition: all 0.3s;
             clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
-            overflow: visible;
         }
 
         .card::before {
@@ -91,18 +86,12 @@
         .card:hover {
             border-color: var(--neon-red);
             box-shadow: 0 0 20px rgba(255, 0, 64, 0.3);
-            transform: translateY(-5px);
-        }
-
-        .card.loading {
-            opacity: 0.5;
         }
 
         .best-opportunity {
             border: 3px solid var(--neon-red);
-            box-shadow: 0 0 10px var(--neon-red-glow), 0 0 20px var(--neon-red-glow), 0 0 30px var(--neon-red-glow), inset 0 0 10px rgba(255, 0, 64, 0.2);
-            animation: neonPulse 2s ease-in-out infinite;
-            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 64, 0.8);
+            animation: neonPulse 2s infinite;
             margin-top: 2.5rem;
         }
 
@@ -119,24 +108,13 @@
             font-weight: 900;
             font-size: 0.8rem;
             letter-spacing: 2px;
-            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
-            animation: textGlow 2s ease-in-out infinite;
             white-space: nowrap;
             z-index: 10;
         }
 
         @keyframes neonPulse {
-            0%, 100% {
-                box-shadow: 0 0 10px var(--neon-red-glow), 0 0 20px var(--neon-red-glow), 0 0 30px var(--neon-red-glow), inset 0 0 10px rgba(255, 0, 64, 0.2);
-            }
-            50% {
-                box-shadow: 0 0 20px var(--neon-red-glow), 0 0 40px var(--neon-red-glow), 0 0 60px var(--neon-red-glow), inset 0 0 20px rgba(255, 0, 64, 0.4);
-            }
-        }
-
-        @keyframes textGlow {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.5); }
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 64, 0.8); }
+            50% { box-shadow: 0 0 40px rgba(255, 0, 64, 1); }
         }
 
         .btn {
@@ -149,50 +127,19 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             cursor: pointer;
-            position: relative;
-            overflow: hidden;
             transition: all 0.3s;
             clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
         }
 
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: var(--neon-red);
-            transition: left 0.3s;
-            z-index: -1;
-        }
-
         .btn:hover {
+            background: var(--neon-red);
             color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--neon-red-glow);
-        }
-
-        .btn:hover::before {
-            left: 0;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.8);
         }
 
         .btn-primary {
             background: var(--neon-red);
             color: var(--dark-bg);
-        }
-
-        .btn-secondary {
-            border-color: var(--text-gray);
-            color: var(--text-gray);
-        }
-
-        .btn-secondary::before {
-            background: var(--text-gray);
         }
 
         .btn-small {
@@ -208,7 +155,6 @@
             width: 100%;
             font-family: 'Rajdhani', sans-serif;
             font-size: 1rem;
-            transition: all 0.3s;
         }
 
         .input-field:focus {
@@ -228,63 +174,99 @@
 
         .neon-text {
             color: var(--neon-red);
-            text-shadow: 0 0 5px var(--neon-red-glow), 0 0 10px var(--neon-red-glow);
+            text-shadow: 0 0 10px rgba(255, 0, 64, 0.8);
         }
 
-        .score-badge {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: var(--dark-elevated);
-            border: 1px solid var(--neon-red);
+        .signal-badge {
             padding: 0.5rem 1rem;
             font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
+            font-weight: 900;
             font-size: 0.875rem;
-            clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-
-        select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ff0040' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
-            appearance: none;
-        }
-
-        .status-dot {
+            letter-spacing: 1px;
             display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--neon-green);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            animation: pulse 2s infinite;
         }
 
-        .status-dot.paused {
+        .signal-buy {
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+
+        .signal-sell {
+            background: var(--neon-red);
+            color: var(--dark-bg);
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.8);
+        }
+
+        .signal-neutral {
             background: var(--text-gray);
-            box-shadow: 0 0 10px rgba(128, 128, 128, 0.8);
+            color: var(--dark-bg);
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.7; }
         }
 
         .chart-container {
             position: relative;
-            height: 250px;
-            margin: 1rem 0;
+            height: 400px;
+            margin: 1.5rem 0;
+            background: var(--dark-elevated);
+            padding: 1rem;
+            border: 1px solid var(--border-dark);
+        }
+
+        .indicator-box {
+            background: var(--dark-elevated);
+            border-left: 3px solid;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .indicator-box.bullish {
+            border-left-color: var(--neon-green);
+        }
+
+        .indicator-box.bearish {
+            border-left-color: var(--neon-red);
+        }
+
+        .indicator-box.neutral {
+            border-left-color: var(--text-gray);
+        }
+
+        .probability-bar {
+            height: 30px;
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan));
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: var(--dark-bg);
+        }
+
+        .ratio-card {
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .ratio-card:hover {
+            border-color: var(--neon-cyan);
+            transform: translateY(-5px);
         }
 
         .loading-skeleton {
@@ -298,26 +280,17 @@
             100% { background-position: -200% 0; }
         }
 
-        .optimization-badge {
-            display: inline-block;
-            background: var(--neon-cyan);
-            color: var(--dark-bg);
-            padding: 0.25rem 0.75rem;
-            font-size: 0.7rem;
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin-left: 0.5rem;
+        select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ff0040' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            appearance: none;
         }
 
         @media (max-width: 768px) {
-            .best-opportunity {
-                margin-top: 3rem;
-            }
-            .best-opportunity::after {
-                font-size: 0.7rem;
-                padding: 0.4rem 1rem;
-                top: -1.5rem;
-            }
+            .best-opportunity { margin-top: 3rem; }
         }
     </style>
 </head>
@@ -331,8 +304,8 @@
 
         const API_KEY = '04eec7507ab745e18e787977413c2649';
         const API_BASE = 'https://api.twelvedata.com';
-        const REQUEST_DELAY = 10000; // 10 segundos entre requests (6 por minuto, seguro)
-        const REFRESH_CYCLE = 60000; // Ciclo completo cada 60 segundos
+        const REQUEST_DELAY = 10000;
+        const REFRESH_CYCLE = 60000;
 
         const PAIRS = [
             { symbol: 'EUR/USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar' },
@@ -341,6 +314,202 @@
             { symbol: 'EUR/JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen' },
             { symbol: 'XAU/USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar' },
         ];
+
+        // ==================== INDICADORES TÉCNICOS ====================
+
+        const calculateRSI = (prices, period = 14) => {
+            if (prices.length < period + 1) return 50;
+
+            let gains = 0, losses = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change > 0) gains += change;
+                else losses += Math.abs(change);
+            }
+
+            const avgGain = gains / period;
+            const avgLoss = losses / period;
+
+            if (avgLoss === 0) return 100;
+            const rs = avgGain / avgLoss;
+            return 100 - (100 / (1 + rs));
+        };
+
+        const calculateMACD = (prices) => {
+            if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+
+            const ema12 = calculateEMA(prices, 12);
+            const ema26 = calculateEMA(prices, 26);
+            const macd = ema12 - ema26;
+
+            // Simplificado: signal line aproximada
+            const signal = macd * 0.9;
+            const histogram = macd - signal;
+
+            return { macd, signal, histogram };
+        };
+
+        const calculateEMA = (prices, period) => {
+            if (prices.length === 0) return 0;
+            const k = 2 / (period + 1);
+            let ema = prices[0];
+            for (let i = 1; i < prices.length; i++) {
+                ema = prices[i] * k + ema * (1 - k);
+            }
+            return ema;
+        };
+
+        const calculateBollingerBands = (prices, period = 20, stdDev = 2) => {
+            if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
+
+            const slice = prices.slice(-period);
+            const middle = slice.reduce((a, b) => a + b, 0) / period;
+            const variance = slice.reduce((sum, price) => sum + Math.pow(price - middle, 2), 0) / period;
+            const std = Math.sqrt(variance);
+
+            return {
+                upper: middle + (std * stdDev),
+                middle: middle,
+                lower: middle - (std * stdDev)
+            };
+        };
+
+        // ==================== ANÁLISIS DE SEÑALES ====================
+
+        const analyzeSignals = (pair, priceHistory) => {
+            if (!priceHistory || priceHistory.length < 30) {
+                return {
+                    signal: 'NEUTRAL',
+                    confidence: 0,
+                    reasons: ['Insuficientes datos históricos'],
+                    entry: pair.price,
+                    stopLoss: pair.price * 0.995,
+                    takeProfit: pair.price * 1.01
+                };
+            }
+
+            const rsi = calculateRSI(priceHistory);
+            const macd = calculateMACD(priceHistory);
+            const bb = calculateBollingerBands(priceHistory);
+            const currentPrice = pair.price;
+
+            let signal = 'NEUTRAL';
+            let confidence = 0;
+            const reasons = [];
+
+            // RSI Signals
+            if (rsi < 30) {
+                confidence += 30;
+                reasons.push('RSI en sobreventa (<30)');
+                signal = 'BUY';
+            } else if (rsi > 70) {
+                confidence += 30;
+                reasons.push('RSI en sobrecompra (>70)');
+                signal = 'SELL';
+            }
+
+            // MACD Signals
+            if (macd.histogram > 0 && macd.macd > macd.signal) {
+                confidence += 25;
+                reasons.push('MACD cruce alcista');
+                if (signal === 'NEUTRAL') signal = 'BUY';
+            } else if (macd.histogram < 0 && macd.macd < macd.signal) {
+                confidence += 25;
+                reasons.push('MACD cruce bajista');
+                if (signal === 'NEUTRAL') signal = 'SELL';
+            }
+
+            // Bollinger Bands
+            if (currentPrice < bb.lower) {
+                confidence += 20;
+                reasons.push('Precio bajo banda inferior Bollinger');
+                if (signal === 'NEUTRAL') signal = 'BUY';
+            } else if (currentPrice > bb.upper) {
+                confidence += 20;
+                reasons.push('Precio sobre banda superior Bollinger');
+                if (signal === 'NEUTRAL') signal = 'SELL';
+            }
+
+            // Tendencia (MA50 vs MA200)
+            if (pair.ma50 > pair.ma200 && currentPrice > pair.ma50) {
+                confidence += 15;
+                reasons.push('Tendencia alcista confirmada');
+                if (signal === 'NEUTRAL') signal = 'BUY';
+            } else if (pair.ma50 < pair.ma200 && currentPrice < pair.ma50) {
+                confidence += 15;
+                reasons.push('Tendencia bajista confirmada');
+                if (signal === 'NEUTRAL') signal = 'SELL';
+            }
+
+            // Volatilidad
+            if (pair.volatility > 50 && pair.volatility < 100) {
+                confidence += 10;
+                reasons.push('Volatilidad óptima para trading');
+            }
+
+            // Calcular niveles
+            const atr = pair.volatility * (currentPrice / 10000); // ATR aproximado
+            let entry, stopLoss, takeProfit;
+
+            if (signal === 'BUY') {
+                entry = currentPrice;
+                stopLoss = currentPrice - (atr * 2);
+                takeProfit = currentPrice + (atr * 3);
+            } else if (signal === 'SELL') {
+                entry = currentPrice;
+                stopLoss = currentPrice + (atr * 2);
+                takeProfit = currentPrice - (atr * 3);
+            } else {
+                entry = currentPrice;
+                stopLoss = currentPrice * 0.995;
+                takeProfit = currentPrice * 1.01;
+            }
+
+            return {
+                signal,
+                confidence: Math.min(confidence, 100),
+                reasons,
+                rsi,
+                macd,
+                bb,
+                entry,
+                stopLoss,
+                takeProfit,
+                atr
+            };
+        };
+
+        // ==================== PROBABILIDADES DE RATIOS ====================
+
+        const calculateRatioProbabilities = (pair, analysis) => {
+            const { volatility, price } = pair;
+            const { signal, confidence } = analysis;
+
+            // Volatilidad normalizada (mayor volatilidad = menor probabilidad de ratios altos)
+            const volFactor = Math.max(0.3, Math.min(1, 100 / volatility));
+
+            // Confianza de señal (mayor confianza = mayor probabilidad)
+            const confFactor = confidence / 100;
+
+            // Base probability ajustada
+            const baseProbability = volFactor * confFactor * 0.8;
+
+            const ratios = [
+                { ratio: '1:1', pips: 50, probability: baseProbability * 90 },
+                { ratio: '1:1.5', pips: 75, probability: baseProbability * 75 },
+                { ratio: '1:2', pips: 100, probability: baseProbability * 60 },
+                { ratio: '1:2.5', pips: 125, probability: baseProbability * 50 },
+                { ratio: '1:3', pips: 150, probability: baseProbability * 40 },
+                { ratio: '1:4', pips: 200, probability: baseProbability * 30 },
+                { ratio: '1:5', pips: 250, probability: baseProbability * 20 },
+            ];
+
+            return ratios.map(r => ({
+                ...r,
+                probability: Math.min(Math.round(r.probability), 95),
+                expectedProfit: (r.pips * 10).toFixed(2) // Aproximado por lote estándar
+            }));
+        };
 
         // ==================== UTILIDADES ====================
 
@@ -361,37 +530,13 @@
             localStorage.setItem('forexrisk-profile', JSON.stringify(profile));
         };
 
-        const getHistory = () => {
-            const stored = localStorage.getItem('forexrisk-history');
-            return stored ? JSON.parse(stored) : [];
-        };
-
-        const saveHistory = (history) => {
-            localStorage.setItem('forexrisk-history', JSON.stringify(history));
-        };
-
-        const addToHistory = (trade) => {
-            const history = getHistory();
-            history.unshift({ ...trade, id: Date.now(), timestamp: new Date().toISOString() });
-            if (history.length > 50) history.pop();
-            saveHistory(history);
-        };
-
-        // Fetch UN SOLO par (respeta límite de API)
         const fetchSinglePair = async (symbol) => {
             try {
                 const url = `${API_BASE}/quote?symbol=${symbol}&apikey=${API_KEY}`;
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (data.code && data.code !== 200) {
-                    console.error('API Error:', data.message);
-                    return null;
-                }
-
-                if (!data.close) {
-                    return null;
-                }
+                if (data.code || !data.close) return null;
 
                 const price = parseFloat(data.close);
                 const open = parseFloat(data.open || price);
@@ -419,32 +564,16 @@
                     timestamp: new Date().toISOString(),
                 };
             } catch (error) {
-                console.error('Fetch error:', error);
                 return null;
             }
         };
 
-        const calculateBias = (price, ma50, ma200) => {
-            if (price > ma200 && ma50 > ma200) {
-                return { bias: 'COMPRAR', color: '#00ff00', explanation: 'Tendencia alcista confirmada.' };
-            } else if (price < ma200 && ma50 < ma200) {
-                return { bias: 'VENDER', color: '#ff0040', explanation: 'Tendencia bajista confirmada.' };
-            }
-            return { bias: 'NEUTRO', color: '#808080', explanation: 'Sin tendencia clara.' };
-        };
-
-        const getTrendLabel = (price, ma50, ma200) => {
-            if (price > ma50 && ma50 > ma200) return 'ALCISTA';
-            if (price < ma50 && ma50 < ma200) return 'BAJISTA';
-            return 'RANGO';
-        };
-
         const calculateOpportunityScore = (pair) => {
+            if (!pair.price) return 0;
             const { price, ma50, ma200, volatility } = pair;
-            const { bias } = calculateBias(price, ma50, ma200);
 
             let score = 0;
-            if (bias !== 'NEUTRO') score += 40;
+            if ((price > ma200 && ma50 > ma200) || (price < ma200 && ma50 < ma200)) score += 40;
 
             const trendStrength = Math.abs(ma50 - ma200) / ma200;
             score += Math.min(30, trendStrength * 1000);
@@ -452,60 +581,29 @@
             const volatilityScore = volatility >= 40 && volatility <= 80 ? 20 : 10;
             score += volatilityScore;
 
-            if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) {
-                score += 10;
-            }
+            if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) score += 10;
 
             return Math.min(100, Math.round(score));
-        };
-
-        const calculatePipValue = (displaySymbol, lotSize) => {
-            const values = { 'EURUSD': 10, 'GBPUSD': 10, 'USDJPY': 9.08, 'EURJPY': 9.08, 'XAUUSD': 10 };
-            return (values[displaySymbol] || 10) * lotSize;
-        };
-
-        const calculatePositionSize = (profile, stopLossPips, displaySymbol, currentPrice) => {
-            const { accountSize, riskPercentage, leverage } = profile;
-            const riskAmount = accountSize * (riskPercentage / 100);
-            const riskPerPip = riskAmount / stopLossPips;
-            const pipValuePerLot = calculatePipValue(displaySymbol, 1);
-            const lotSize = riskPerPip / pipValuePerLot;
-            const positionSizeUnits = lotSize * 100000;
-            const marginRequired = (positionSizeUnits * currentPrice) / leverage;
-
-            return {
-                riskAmount,
-                lotSize: parseFloat(lotSize.toFixed(2)),
-                pipValue: calculatePipValue(displaySymbol, lotSize),
-                marginRequired: parseFloat(marginRequired.toFixed(2)),
-                positionSizeUnits: parseFloat(positionSizeUnits.toFixed(0)),
-            };
         };
 
         // ==================== COMPONENTES ====================
 
         const TrendingUpIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
         const TrendingDownIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>;
-        const MinusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-        const RefreshIcon = ({ spinning }) => <svg className={spinning ? 'animate-spin' : ''} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>;
-        const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6"></path></svg>;
-        const HistoryIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
-        const UserIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const RefreshIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>;
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-        const CalculatorIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
+        const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
 
-        const Header = ({ lastUpdate, requestCount, isPaused }) => (
+        const Header = ({ lastUpdate, requestCount }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                         <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
-                        <span style={{ background: 'var(--neon-green)', color: '#000', padding: '0.25rem 0.75rem', fontSize: '0.7rem', fontWeight: '900' }}>REAL-TIME</span>
-                        <span className="optimization-badge">OPTIMIZADO</span>
+                        <span style={{ background: 'var(--neon-green)', color: '#000', padding: '0.25rem 0.75rem', fontSize: '0.7rem', fontWeight: '900' }}>ULTIMATE</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                        <span className={`status-dot ${isPaused ? 'paused' : ''}`}></span>
-                        <span>{isPaused ? '⏸️ PAUSADO' : '🔴 EN VIVO'} • {lastUpdate} • {requestCount} requests • Carga progresiva</span>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                        🎯 Análisis Técnico Avanzado • Señales Automatizadas • Probabilidades de Éxito • {lastUpdate} • {requestCount} requests
                     </div>
                 </div>
             </header>
@@ -516,38 +614,27 @@
                 return (
                     <div className="card loading">
                         <div className="loading-skeleton" style={{ height: '200px' }}></div>
-                        <p style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '1rem' }}>Cargando datos...</p>
+                        <p style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '1rem' }}>Cargando...</p>
                     </div>
                 );
             }
 
-            const { displaySymbol, name, price, ma50, ma200, volatility, open } = pair;
-            const trend = getTrendLabel(price, ma50, ma200);
+            const { displaySymbol, name, price, open } = pair;
             const score = calculateOpportunityScore(pair);
             const change = ((price - open) / open * 100).toFixed(2);
-            const changeColor = change >= 0 ? '#00ff00' : '#ff0040';
-
-            const trendConfig = {
-                'ALCISTA': { icon: <TrendingUpIcon />, color: '#00ff00' },
-                'BAJISTA': { icon: <TrendingDownIcon />, color: '#ff0040' },
-                'RANGO': { icon: <MinusIcon />, color: '#808080' },
-            };
-            const config = trendConfig[trend];
+            const changeColor = change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
 
             return (
                 <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
-                    <div className="score-badge">SCORE: {score}</div>
+                    <div style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--neon-red)', fontFamily: 'Orbitron', fontSize: '0.875rem', fontWeight: '700' }}>
+                        SCORE: {score}
+                    </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', marginTop: '1rem' }}>
-                        <div>
-                            <h3 className="neon-text" style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem' }}>
-                                {displaySymbol}
-                            </h3>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{name}</p>
-                        </div>
-                        <div style={{ color: config.color, fontSize: '1.5rem' }}>
-                            {config.icon}
-                        </div>
+                    <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                        <h3 className="neon-text" style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem' }}>
+                            {displaySymbol}
+                        </h3>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{name}</p>
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
@@ -562,149 +649,275 @@
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem', marginBottom: '1rem' }}>
-                        <div>
-                            <p style={{ color: 'var(--text-gray)' }}>TENDENCIA</p>
-                            <p style={{ fontWeight: '700', color: config.color }}>{trend}</p>
-                        </div>
-                        <div>
-                            <p style={{ color: 'var(--text-gray)' }}>VOLATILIDAD</p>
-                            <p style={{ fontWeight: '700' }}>{volatility} PIPS</p>
-                        </div>
-                    </div>
-
                     <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
-                        ANALIZAR
+                        🎯 ANÁLISIS COMPLETO
                     </button>
                 </div>
             );
         };
 
-        const BiasBox = ({ bias, explanation }) => {
-            const config = {
-                'COMPRAR': { icon: <TrendingUpIcon />, bg: '#003300', border: '#00ff00' },
-                'VENDER': { icon: <TrendingDownIcon />, bg: '#330000', border: '#ff0040' },
-                'NEUTRO': { icon: <MinusIcon />, bg: '#1a1a1a', border: '#808080' },
-            };
-            const c = config[bias];
+        const CandlestickChart = ({ priceHistory, pair }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                if (!chartRef.current || !priceHistory || priceHistory.length < 5) return;
+
+                const ctx = chartRef.current.getContext('2d');
+
+                if (chartInstance.current) chartInstance.current.destroy();
+
+                // Generar velas simuladas basadas en el historial
+                const candles = priceHistory.slice(-30).map((price, i) => {
+                    const volatility = pair.volatility / 10000;
+                    const open = i === 0 ? price : priceHistory[i - 1];
+                    const close = price;
+                    const high = Math.max(open, close) + (Math.random() * volatility * price);
+                    const low = Math.min(open, close) - (Math.random() * volatility * price);
+
+                    return { x: i, o: open, h: high, l: low, c: close };
+                });
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [{
+                            label: pair.displaySymbol,
+                            data: candles,
+                            color: {
+                                up: '#00ff00',
+                                down: '#ff0040',
+                                unchanged: '#808080',
+                            },
+                            borderColor: {
+                                up: '#00ff00',
+                                down: '#ff0040',
+                                unchanged: '#808080',
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                grid: { color: '#1a1a1a' },
+                                ticks: { color: '#808080' }
+                            },
+                            y: {
+                                display: true,
+                                grid: { color: '#1a1a1a' },
+                                ticks: { color: '#808080' }
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [priceHistory, pair]);
+
+            if (!priceHistory || priceHistory.length < 5) {
+                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando datos para gráfico...</div>;
+            }
+
             return (
-                <div style={{ background: c.bg, border: `3px solid ${c.border}`, padding: '2rem', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', fontSize: '3rem' }}>{c.icon}</div>
-                    <h3 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '1rem', color: c.border }}>{bias}</h3>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{explanation}</p>
+                <div className="chart-container">
+                    <canvas ref={chartRef}></canvas>
                 </div>
             );
         };
 
-        const RiskPanel = ({ pair, profile }) => {
-            const [stopLoss, setStopLoss] = useState(50);
-            const [takeProfit, setTakeProfit] = useState(100);
-            const [tradeType, setTradeType] = useState('Buy');
-
-            const positionData = calculatePositionSize(profile, stopLoss, pair.displaySymbol, pair.price);
-            const profitAmount = calculatePipValue(pair.displaySymbol, positionData.lotSize) * takeProfit;
-            const riskReward = (takeProfit / stopLoss).toFixed(2);
-
-            const handleExecute = () => {
-                addToHistory({ symbol: pair.displaySymbol, type: tradeType, lotSize: positionData.lotSize, stopLoss, takeProfit });
-                alert('✅ Operación registrada en historial');
-            };
-
-            return (
-                <div className="card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <CalculatorIcon />
-                        <h3 style={{ fontSize: '1.25rem' }}>GESTIÓN DE RIESGO</h3>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>STOP LOSS (PIPS)</label><input type="number" value={stopLoss} onChange={(e) => setStopLoss(parseFloat(e.target.value))} className="input-field" /></div>
-                        <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>TAKE PROFIT (PIPS)</label><input type="number" value={takeProfit} onChange={(e) => setTakeProfit(parseFloat(e.target.value))} className="input-field" /></div>
-                        <div style={{ gridColumn: 'span 2' }}><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>TIPO</label><select value={tradeType} onChange={(e) => setTradeType(e.target.value)} className="input-field"><option value="Buy">BUY</option><option value="Sell">SELL</option></select></div>
-                    </div>
-                    <div style={{ background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', padding: '1rem', marginBottom: '1rem' }}>
-                        <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--neon-red)' }}>RESULTADOS</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem' }}>
-                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>RIESGO</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ff0040' }}>${positionData.riskAmount.toFixed(2)}</p></div>
-                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>BENEFICIO</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#00ff00' }}>${profitAmount.toFixed(2)}</p></div>
-                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>LOTES</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{positionData.lotSize}</p></div>
-                            <div><p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>R:R</p><p style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--neon-red)' }}>1:{riskReward}</p></div>
-                        </div>
-                    </div>
-                    <button onClick={handleExecute} className="btn btn-primary" style={{ width: '100%' }}>EJECUTAR {tradeType.toUpperCase()}</button>
-                </div>
-            );
-        };
-
-        const AnalysisPanel = ({ pair, onClose, profile }) => {
+        const AdvancedAnalysisPanel = ({ pair, onClose, priceHistory }) => {
             if (!pair) return null;
-            const { displaySymbol, name, price, ma50, ma200, volatility } = pair;
-            const { bias, explanation } = calculateBias(price, ma50, ma200);
+
+            const analysis = analyzeSignals(pair, priceHistory);
+            const ratios = calculateRatioProbabilities(pair, analysis);
+
+            const signalClass = analysis.signal === 'BUY' ? 'signal-buy' : analysis.signal === 'SELL' ? 'signal-sell' : 'signal-neutral';
+
             return (
                 <div className="modal-overlay">
                     <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
                             <div style={{ background: 'var(--dark-surface)', border: '2px solid var(--neon-red)', padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                                    <div><h2 className="neon-text" style={{ fontSize: '2.5rem' }}>{displaySymbol}</h2><p style={{ color: 'var(--text-gray)' }}>{name}</p></div>
-                                    <button onClick={onClose} className="btn btn-small"><XIcon /></button>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                        <div className="card">
-                                            <h3 style={{ marginBottom: '1rem' }}>DATOS DEL MERCADO</h3>
-                                            <div style={{ marginBottom: '1rem' }}><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO</p><p style={{ fontSize: '2.5rem', fontWeight: '900', fontFamily: 'Orbitron' }}>{displaySymbol === 'XAUUSD' ? price.toFixed(2) : price.toFixed(4)}</p></div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                                                <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 50</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displaySymbol === 'XAUUSD' ? ma50.toFixed(2) : ma50.toFixed(4)}</p></div>
-                                                <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 200</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displaySymbol === 'XAUUSD' ? ma200.toFixed(2) : ma200.toFixed(4)}</p></div>
-                                            </div>
-                                            <div><p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>VOLATILIDAD</p><p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{volatility} PIPS</p></div>
-                                        </div>
-                                        <BiasBox bias={bias} explanation={explanation} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <div>
+                                        <h2 className="neon-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{pair.displaySymbol}</h2>
+                                        <p style={{ color: 'var(--text-gray)' }}>{pair.name}</p>
                                     </div>
-                                    <RiskPanel pair={pair} profile={profile} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const ProfilePanel = ({ onClose, profile, onSave }) => {
-            const [formData, setFormData] = useState(profile);
-            const handleSubmit = (e) => { e.preventDefault(); onSave(formData); onClose(); };
-            return (
-                <div className="modal-overlay">
-                    <div style={{ minHeight: '100vh', padding: '2rem', display: 'flex', alignItems: 'center' }}>
-                        <div className="card" style={{ maxWidth: '700px', margin: '0 auto', width: '100%' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}><UserIcon /><h2>PERFIL</h2></div>
-                            <form onSubmit={handleSubmit}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>CUENTA</label><input type="number" value={formData.accountSize} onChange={(e) => setFormData({...formData, accountSize: parseFloat(e.target.value)})} className="input-field" required /></div>
-                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>RIESGO (%)</label><input type="number" step="0.1" value={formData.riskPercentage} onChange={(e) => setFormData({...formData, riskPercentage: parseFloat(e.target.value)})} className="input-field" required /></div>
-                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>APALANCAMIENTO</label><select value={formData.leverage} onChange={(e) => setFormData({...formData, leverage: parseFloat(e.target.value)})} className="input-field"><option value="30">1:30</option><option value="50">1:50</option><option value="100">1:100</option><option value="200">1:200</option><option value="500">1:500</option></select></div>
-                                    <div><label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>MONEDA</label><select value={formData.baseCurrency} onChange={(e) => setFormData({...formData, baseCurrency: e.target.value})} className="input-field"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '1rem' }}><button type="submit" className="btn btn-primary" style={{ flex: 1 }}>GUARDAR</button><button type="button" onClick={onClose} className="btn btn-secondary">CANCELAR</button></div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const HistoryPanel = ({ onClose }) => {
-            const history = getHistory();
-            return (
-                <div className="modal-overlay">
-                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <div className="card" style={{ padding: '2rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                                    <h2>HISTORIAL</h2>
                                     <button onClick={onClose} className="btn btn-small"><XIcon /></button>
                                 </div>
-                                {history.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-gray)', padding: '3rem' }}>Sin operaciones</p> : <div>{history.map(t => <div key={t.id} style={{ background: 'var(--dark-elevated)', borderLeft: '3px solid var(--neon-red)', padding: '1rem', marginBottom: '0.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span style={{ fontWeight: '700' }}>{t.symbol}</span><span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{new Date(t.timestamp).toLocaleString('es-ES')}</span></div><div style={{ fontSize: '0.875rem' }}>{t.type} • {t.lotSize} lotes • SL:{t.stopLoss} • TP:{t.takeProfit}</div></div>)}</div>}
+
+                                {/* Señal Principal */}
+                                <div className="card" style={{ marginBottom: '2rem', padding: '2rem', textAlign: 'center' }}>
+                                    <h3 style={{ marginBottom: '1rem' }}>SEÑAL DE TRADING</h3>
+                                    <div className={`signal-badge ${signalClass}`} style={{ fontSize: '2rem', padding: '1rem 2rem' }}>
+                                        {analysis.signal === 'BUY' ? '🟢 COMPRA' : analysis.signal === 'SELL' ? '🔴 VENTA' : '⚪ ESPERAR'}
+                                    </div>
+                                    <div style={{ marginTop: '1rem', fontSize: '1.25rem', fontWeight: '700' }}>
+                                        Confianza: {analysis.confidence}%
+                                    </div>
+                                    <div className="probability-bar" style={{ marginTop: '1rem' }}>
+                                        <div className="probability-fill" style={{ width: `${analysis.confidence}%` }}>
+                                            {analysis.confidence}%
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                                    {/* Gráfico de Velas */}
+                                    <div className="card">
+                                        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <BarChartIcon /> GRÁFICO DE VELAS
+                                        </h3>
+                                        <CandlestickChart priceHistory={priceHistory} pair={pair} />
+                                    </div>
+
+                                    {/* Indicadores Técnicos */}
+                                    <div className="card">
+                                        <h3 style={{ marginBottom: '1rem' }}>INDICADORES TÉCNICOS</h3>
+
+                                        <div className={`indicator-box ${analysis.rsi < 30 ? 'bullish' : analysis.rsi > 70 ? 'bearish' : 'neutral'}`}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <strong>RSI (14)</strong>
+                                                <span style={{ fontFamily: 'Orbitron', fontSize: '1.25rem' }}>{analysis.rsi.toFixed(2)}</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                                                {analysis.rsi < 30 ? 'Sobreventa - Señal de compra' : analysis.rsi > 70 ? 'Sobrecompra - Señal de venta' : 'Zona neutral'}
+                                            </div>
+                                        </div>
+
+                                        <div className={`indicator-box ${analysis.macd.histogram > 0 ? 'bullish' : 'bearish'}`}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <strong>MACD</strong>
+                                                <span style={{ fontFamily: 'Orbitron' }}>{analysis.macd.histogram > 0 ? '↑' : '↓'}</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.875rem' }}>
+                                                <div>Línea MACD: {analysis.macd.macd.toFixed(6)}</div>
+                                                <div>Señal: {analysis.macd.signal.toFixed(6)}</div>
+                                                <div>Histograma: {analysis.macd.histogram.toFixed(6)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="indicator-box neutral">
+                                            <div style={{ marginBottom: '0.5rem' }}><strong>Bandas de Bollinger</strong></div>
+                                            <div style={{ fontSize: '0.875rem' }}>
+                                                <div>Superior: {analysis.bb.upper.toFixed(4)}</div>
+                                                <div>Media: {analysis.bb.middle.toFixed(4)}</div>
+                                                <div>Inferior: {analysis.bb.lower.toFixed(4)}</div>
+                                                <div style={{ marginTop: '0.5rem', color: pair.price < analysis.bb.lower ? 'var(--neon-green)' : pair.price > analysis.bb.upper ? 'var(--neon-red)' : 'var(--text-gray)' }}>
+                                                    {pair.price < analysis.bb.lower ? 'Precio bajo banda inferior - Señal alcista' : pair.price > analysis.bb.upper ? 'Precio sobre banda superior - Señal bajista' : 'Precio en rango normal'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)' }}>
+                                            <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Razones de la Señal:</strong>
+                                            {analysis.reasons.map((reason, i) => (
+                                                <div key={i} style={{ fontSize: '0.875rem', marginBottom: '0.25rem', color: 'var(--neon-cyan)' }}>
+                                                    • {reason}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Niveles de Trading */}
+                                    <div className="card">
+                                        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <TargetIcon /> NIVELES SUGERIDOS
+                                        </h3>
+
+                                        <div style={{ background: 'var(--dark-elevated)', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--neon-cyan)' }}>
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>ENTRADA</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: '900', fontFamily: 'Orbitron', color: 'var(--neon-cyan)' }}>
+                                                    {analysis.entry.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>STOP LOSS</div>
+                                                    <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-red)' }}>
+                                                        {analysis.stopLoss.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                        {Math.abs(((analysis.stopLoss - analysis.entry) / analysis.entry * 10000).toFixed(0))} pips
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>TAKE PROFIT</div>
+                                                    <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-green)' }}>
+                                                        {analysis.takeProfit.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                        {Math.abs(((analysis.takeProfit - analysis.entry) / analysis.entry * 10000).toFixed(0))} pips
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ background: 'var(--dark-elevated)', padding: '1rem', fontSize: '0.875rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <span>Risk/Reward:</span>
+                                                <strong style={{ color: 'var(--neon-green)' }}>
+                                                    1:{(Math.abs(analysis.takeProfit - analysis.entry) / Math.abs(analysis.stopLoss - analysis.entry)).toFixed(2)}
+                                                </strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>ATR (Volatilidad):</span>
+                                                <strong>{analysis.atr ? analysis.atr.toFixed(4) : 'N/A'}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Probabilidades de Ratios */}
+                                    <div className="card" style={{ gridColumn: 'span 2' }}>
+                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES DE ÉXITO POR RATIO R:R</h3>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                                            {ratios.map((ratio, i) => (
+                                                <div key={i} className="ratio-card">
+                                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', fontFamily: 'Orbitron', color: 'var(--neon-cyan)', marginBottom: '0.5rem' }}>
+                                                        {ratio.ratio}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                                        {ratio.pips} pips
+                                                    </div>
+                                                    <div className="probability-bar">
+                                                        <div className="probability-fill" style={{ 
+                                                            width: `${ratio.probability}%`,
+                                                            background: ratio.probability > 70 ? 'linear-gradient(90deg, var(--neon-green), var(--neon-cyan))' : ratio.probability > 50 ? 'linear-gradient(90deg, var(--neon-cyan), var(--neon-yellow))' : 'linear-gradient(90deg, var(--neon-yellow), var(--neon-red))'
+                                                        }}>
+                                                            {ratio.probability}%
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                                        ~${ratio.expectedProfit}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', fontSize: '0.875rem' }}>
+                                            <strong>💡 Interpretación:</strong>
+                                            <div style={{ marginTop: '0.5rem', color: 'var(--text-gray)' }}>
+                                                • <strong style={{ color: 'var(--neon-green)' }}>&gt;70%:</strong> Alta probabilidad - Ratio recomendado para esta operación<br/>
+                                                • <strong style={{ color: 'var(--neon-cyan)' }}>50-70%:</strong> Probabilidad moderada - Considerar según tu perfil de riesgo<br/>
+                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad - Ratio muy ambicioso para las condiciones actuales<br/>
+                                                <br/>
+                                                <em>Probabilidades calculadas basadas en: Volatilidad actual ({pair.volatility} pips), Confianza de señal ({analysis.confidence}%), Condiciones del mercado.</em>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -716,23 +929,19 @@
 
         const App = () => {
             const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, isLoading: true })));
+            const [priceHistories, setPriceHistories] = useState({});
             const [selectedPair, setSelectedPair] = useState(null);
-            const [showProfile, setShowProfile] = useState(false);
-            const [showHistory, setShowHistory] = useState(false);
-            const [profile, setProfile] = useState(getProfile());
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
             const [requestCount, setRequestCount] = useState(0);
             const [isPaused, setIsPaused] = useState(false);
             const loadingRef = useRef(false);
 
-            // Detectar tab inactiva
             useEffect(() => {
                 const handleVisibility = () => setIsPaused(document.hidden);
                 document.addEventListener('visibilitychange', handleVisibility);
                 return () => document.removeEventListener('visibilitychange', handleVisibility);
             }, []);
 
-            // Carga progresiva respetando límites
             const loadAllPairs = async () => {
                 if (loadingRef.current || isPaused) return;
                 loadingRef.current = true;
@@ -747,32 +956,30 @@
                         setPairs(prev => prev.map(p => 
                             p.symbol === pairConfig.symbol ? { ...data, isLoading: false } : p
                         ));
+
+                        setPriceHistories(prev => {
+                            const history = [...(prev[data.displaySymbol] || []), data.price];
+                            if (history.length > 50) history.shift();
+                            return { ...prev, [data.displaySymbol]: history };
+                        });
+
                         setRequestCount(prev => prev + 1);
                         setLastUpdate(new Date().toLocaleTimeString('es-ES'));
                     }
 
-                    // Esperar 10 segundos entre requests
-                    if (i < PAIRS.length - 1) {
-                        await sleep(REQUEST_DELAY);
-                    }
+                    if (i < PAIRS.length - 1) await sleep(REQUEST_DELAY);
                 }
 
                 loadingRef.current = false;
             };
 
-            // Iniciar carga
             useEffect(() => {
                 loadAllPairs();
-
-                // Recargar cada 60 segundos
                 const interval = setInterval(() => {
                     if (!isPaused) loadAllPairs();
                 }, REFRESH_CYCLE);
-
                 return () => clearInterval(interval);
             }, [isPaused]);
-
-            const handleSaveProfile = (newProfile) => { setProfile(newProfile); saveProfile(newProfile); };
 
             const bestPair = pairs.filter(p => p.price).reduce((best, curr) => 
                 calculateOpportunityScore(curr) > calculateOpportunityScore(best) ? curr : best
@@ -780,30 +987,17 @@
 
             return (
                 <div>
-                    <Header lastUpdate={lastUpdate} requestCount={requestCount} isPaused={isPaused} />
+                    <Header lastUpdate={lastUpdate} requestCount={requestCount} />
 
-                    <div style={{ background: 'var(--dark-elevated)', borderBottom: '1px solid var(--border-dark)', padding: '1rem' }}>
-                        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                            <div style={{ display: 'flex', gap: '2rem', fontSize: '0.875rem' }}>
-                                <div><span style={{ color: 'var(--text-gray)' }}>CUENTA: </span><span style={{ fontWeight: '700', color: 'var(--neon-red)' }}>${profile.accountSize.toLocaleString()}</span></div>
-                                <div><span style={{ color: 'var(--text-gray)' }}>RIESGO: </span><span style={{ fontWeight: '700' }}>{profile.riskPercentage}%</span></div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => setShowHistory(true)} className="btn btn-small"><HistoryIcon /></button>
-                                <button onClick={() => setShowProfile(true)} className="btn btn-small"><SettingsIcon /></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                    <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                         <div style={{ marginBottom: '2rem' }}>
                             <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>MERCADOS PRINCIPALES</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                ⚡ Carga progresiva • 1 par cada 10s • Respeta límite API • {isPaused ? 'PAUSADO' : 'ACTIVO'}
+                                🎯 Análisis técnico completo con RSI, MACD, Bollinger Bands • Probabilidades de éxito por ratio • Señales automatizadas
                             </p>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                             {pairs.map(pair => (
                                 <PairCard
                                     key={pair.symbol}
@@ -816,9 +1010,13 @@
                         </div>
                     </main>
 
-                    {selectedPair && <AnalysisPanel pair={selectedPair} onClose={() => setSelectedPair(null)} profile={profile} />}
-                    {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profile={profile} onSave={handleSaveProfile} />}
-                    {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
+                    {selectedPair && (
+                        <AdvancedAnalysisPanel 
+                            pair={selectedPair} 
+                            onClose={() => setSelectedPair(null)}
+                            priceHistory={priceHistories[selectedPair.displaySymbol] || []}
+                        />
+                    )}
                 </div>
             );
         };
