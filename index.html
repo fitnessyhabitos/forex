@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOREXRISK PRO • CYBERPUNK EDITION</title>
+
+    <!-- React y ReactDOM desde CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-red: #ff0040;
+            --neon-red-glow: rgba(255, 0, 64, 0.8);
+            --dark-bg: #000000;
+            --dark-surface: #0a0a0a;
+            --dark-elevated: #121212;
+            --border-dark: #1a1a1a;
+            --text-white: #ffffff;
+            --text-gray: #808080;
+            --red-dark: #8b0000;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text-white);
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Efecto de escaneo cyberpunk */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(255, 0, 64, 0.03),
+                    rgba(255, 0, 64, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1000;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* Títulos con fuente Orbitron */
+        h1, h2, h3, h4 {
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .card {
+            background: var(--dark-surface);
+            border: 1px solid var(--border-dark);
+            border-radius: 0;
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.3s;
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 15px;
+            height: 15px;
+            background: var(--neon-red);
+            clip-path: polygon(100% 0, 100% 100%, 0 0);
+        }
+
+        .card:hover {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 20px rgba(255, 0, 64, 0.3);
+            transform: translateY(-5px);
+        }
+
+        /* BEST OPPORTUNITY - Borde neón grueso animado */
+        .best-opportunity {
+            border: 3px solid var(--neon-red);
+            box-shadow: 
+                0 0 10px var(--neon-red-glow),
+                0 0 20px var(--neon-red-glow),
+                0 0 30px var(--neon-red-glow),
+                inset 0 0 10px rgba(255, 0, 64, 0.2);
+            animation: neonPulse 2s ease-in-out infinite;
+            transform: scale(1.05);
+        }
+
+        .best-opportunity::after {
+            content: '⚡ MEJOR OPORTUNIDAD';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--neon-red);
+            color: var(--dark-bg);
+            padding: 0.25rem 1rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+            animation: textGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes neonPulse {
+            0%, 100% {
+                box-shadow: 
+                    0 0 10px var(--neon-red-glow),
+                    0 0 20px var(--neon-red-glow),
+                    0 0 30px var(--neon-red-glow),
+                    inset 0 0 10px rgba(255, 0, 64, 0.2);
+            }
+            50% {
+                box-shadow: 
+                    0 0 20px var(--neon-red-glow),
+                    0 0 40px var(--neon-red-glow),
+                    0 0 60px var(--neon-red-glow),
+                    inset 0 0 20px rgba(255, 0, 64, 0.4);
+            }
+        }
+
+        @keyframes textGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+        }
+
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--neon-red);
+            background: transparent;
+            color: var(--neon-red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--neon-red);
+            transition: left 0.3s;
+            z-index: -1;
+        }
+
+        .btn:hover {
+            color: var(--dark-bg);
+            box-shadow: 0 0 20px var(--neon-red-glow);
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn-primary {
+            background: var(--neon-red);
+            color: var(--dark-bg);
+        }
+
+        .btn-primary::before {
+            background: var(--text-white);
+        }
+
+        .input-field {
+            background: var(--dark-elevated);
+            border: 1px solid var(--border-dark);
+            color: var(--text-white);
+            padding: 0.75rem 1rem;
+            width: 100%;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255, 0, 64, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .neon-text {
+            color: var(--neon-red);
+            text-shadow: 
+                0 0 5px var(--neon-red-glow),
+                0 0 10px var(--neon-red-glow);
+        }
+
+        .score-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--dark-elevated);
+            border: 1px solid var(--neon-red);
+            padding: 0.5rem 1rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.875rem;
+            clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ff0040' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            appearance: none;
+        }
+
+        /* Glitch effect para header */
+        .glitch {
+            position: relative;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0.8;
+        }
+
+        .glitch::before {
+            animation: glitch1 0.3s infinite;
+            color: var(--neon-red);
+            z-index: -1;
+        }
+
+        .glitch::after {
+            animation: glitch2 0.3s infinite;
+            color: var(--text-white);
+            z-index: -2;
+        }
+
+        @keyframes glitch1 {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        @keyframes glitch2 {
+            0% { transform: translate(0); }
+            20% { transform: translate(2px, -2px); }
+            40% { transform: translate(2px, 2px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(-2px, 2px); }
+            100% { transform: translate(0); }
+        }
+
+        /* Status indicator */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-red);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 10px var(--neon-red-glow);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Grid lines cyberpunk */
+        .cyber-grid {
+            background-image: 
+                linear-gradient(var(--border-dark) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-dark) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card {
+                clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+            }
+            .card::before {
+                width: 10px;
+                height: 10px;
+            }
+        }
+    </style>
+</head>
+<body class="cyber-grid">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // ==================== CONFIGURACIÓN API ====================
+
+        const FOREX_API_BASE = 'https://api.exchangerate.host';
+
+        const SUPPORTED_PAIRS = [
+            { symbol: 'EURUSD', name: 'Euro / US Dollar', base: 'EUR', quote: 'USD', type: 'forex' },
+            { symbol: 'GBPUSD', name: 'British Pound / US Dollar', base: 'GBP', quote: 'USD', type: 'forex' },
+            { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen', base: 'USD', quote: 'JPY', type: 'forex' },
+            { symbol: 'EURJPY', name: 'Euro / Japanese Yen', base: 'EUR', quote: 'JPY', type: 'forex' },
+            { symbol: 'XAUUSD', name: 'Gold / US Dollar', base: 'XAU', quote: 'USD', type: 'gold' },
+        ];
+
+        // ==================== UTILIDADES ====================
+
+        const getProfile = () => {
+            const stored = localStorage.getItem('forexrisk-cyberpunk');
+            return stored ? JSON.parse(stored) : {
+                accountSize: 10000,
+                riskPercentage: 2,
+                leverage: 30,
+                baseCurrency: 'USD',
+                riskProfile: 'Moderado',
+            };
+        };
+
+        const saveProfile = (profile) => {
+            localStorage.setItem('forexrisk-cyberpunk', JSON.stringify(profile));
+        };
+
+        // Fetch datos reales de Forex
+        const fetchRealForexData = async () => {
+            try {
+                // Obtener tasas base en USD
+                const response = await fetch(`${FOREX_API_BASE}/latest?base=USD`);
+                const data = await response.json();
+
+                if (!data.rates) throw new Error('No rates data');
+
+                // Calcular precios para cada par
+                const pairsData = SUPPORTED_PAIRS.map(pair => {
+                    let price;
+
+                    if (pair.base === 'USD') {
+                        // USD/XXX
+                        price = data.rates[pair.quote];
+                    } else if (pair.quote === 'USD') {
+                        // XXX/USD
+                        price = 1 / data.rates[pair.base];
+                    } else {
+                        // XXX/YYY
+                        price = data.rates[pair.quote] / data.rates[pair.base];
+                    }
+
+                    // Simular medias móviles (en producción, usar datos históricos)
+                    const variation = price * 0.03;
+                    const ma50 = price - (Math.random() - 0.5) * variation;
+                    const ma200 = price - (Math.random() - 0.3) * variation * 2;
+                    const volatility = Math.floor(Math.random() * 40) + 30;
+
+                    return {
+                        ...pair,
+                        price,
+                        ma50,
+                        ma200,
+                        volatility,
+                        timestamp: new Date().toISOString(),
+                    };
+                });
+
+                return pairsData;
+            } catch (error) {
+                console.error('Error fetching real forex data:', error);
+                return generateFallbackData();
+            }
+        };
+
+        const generateFallbackData = () => {
+            return SUPPORTED_PAIRS.map(pair => ({
+                ...pair,
+                price: Math.random() * 100 + 1,
+                ma50: Math.random() * 100 + 1,
+                ma200: Math.random() * 100 + 1,
+                volatility: Math.floor(Math.random() * 40) + 30,
+                timestamp: new Date().toISOString(),
+            }));
+        };
+
+        // Calcular sesgo
+        const calculateBias = (price, ma50, ma200) => {
+            let bias = 'NEUTRO';
+            let color = 'gray';
+            let explanation = '';
+
+            if (price > ma200 && ma50 > ma200) {
+                bias = 'COMPRAR';
+                color = '#00ff00';
+                explanation = 'Tendencia alcista confirmada. Precio y MA50 sobre MA200.';
+            } else if (price < ma200 && ma50 < ma200) {
+                bias = 'VENDER';
+                color = '#ff0040';
+                explanation = 'Tendencia bajista confirmada. Precio y MA50 bajo MA200.';
+            } else {
+                bias = 'NEUTRO';
+                color = '#808080';
+                explanation = 'Sin tendencia clara. Señales mixtas en el mercado.';
+            }
+
+            return { bias, color, explanation };
+        };
+
+        const getTrendLabel = (price, ma50, ma200) => {
+            if (price > ma50 && ma50 > ma200) return 'ALCISTA';
+            if (price < ma50 && ma50 < ma200) return 'BAJISTA';
+            return 'RANGO';
+        };
+
+        // Calcular SCORE de oportunidad (0-100)
+        const calculateOpportunityScore = (pair) => {
+            const { price, ma50, ma200, volatility } = pair;
+            const { bias } = calculateBias(price, ma50, ma200);
+
+            let score = 0;
+
+            // +40 puntos si hay sesgo claro
+            if (bias !== 'NEUTRO') score += 40;
+
+            // +30 puntos por tendencia fuerte
+            const trendStrength = Math.abs(ma50 - ma200) / ma200;
+            score += Math.min(30, trendStrength * 1000);
+
+            // +20 puntos por volatilidad óptima (40-60 pips)
+            const volatilityScore = volatility >= 40 && volatility <= 60 ? 20 : 10;
+            score += volatilityScore;
+
+            // +10 puntos por alineación perfecta
+            if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) {
+                score += 10;
+            }
+
+            return Math.min(100, Math.round(score));
+        };
+
+        // Cálculos de riesgo
+        const calculatePipValue = (pair, lotSize) => {
+            const standardPipValues = {
+                'EURUSD': 10, 'GBPUSD': 10, 'USDJPY': 9.08,
+                'EURJPY': 9.08, 'XAUUSD': 10,
+            };
+            return (standardPipValues[pair] || 10) * lotSize;
+        };
+
+        const calculatePositionSize = (profile, stopLossPips, pair) => {
+            const { accountSize, riskPercentage, leverage } = profile;
+            const riskAmount = accountSize * (riskPercentage / 100);
+            const riskPerPip = riskAmount / stopLossPips;
+            const pipValuePerLot = calculatePipValue(pair, 1);
+            const lotSize = riskPerPip / pipValuePerLot;
+
+            const prices = {
+                'EURUSD': 1.0856, 'GBPUSD': 1.2645, 'USDJPY': 148.75,
+                'EURJPY': 161.45, 'XAUUSD': 2045.30,
+            };
+            const positionSizeUnits = lotSize * 100000;
+            const marginRequired = (positionSizeUnits * (prices[pair] || 1)) / leverage;
+
+            return {
+                riskAmount,
+                lotSize: parseFloat(lotSize.toFixed(2)),
+                pipValue: calculatePipValue(pair, lotSize),
+                marginRequired: parseFloat(marginRequired.toFixed(2)),
+                positionSizeUnits: parseFloat(positionSizeUnits.toFixed(0)),
+            };
+        };
+
+        // ==================== COMPONENTES ====================
+
+        // Iconos SVG
+        const TrendingUpIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        );
+
+        const TrendingDownIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                <polyline points="17 18 23 18 23 12"></polyline>
+            </svg>
+        );
+
+        const MinusIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+
+        const RefreshIcon = ({ spinning }) => (
+            <svg className={spinning ? 'animate-spin' : ''} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+        );
+
+        const SettingsIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6"></path>
+            </svg>
+        );
+
+        const UserIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+        );
+
+        const XIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const CalculatorIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+            </svg>
+        );
+
+        const BarChartIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+        );
+
+        // Header Component
+        const Header = ({ onRefresh, isRefreshing, lastUpdate }) => (
+            <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', position: 'relative' }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ color: 'var(--neon-red)', fontSize: '2rem' }}>
+                                <TrendingUpIcon />
+                            </div>
+                            <div>
+                                <h1 className="glitch" data-text="FOREXRISK PRO" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>
+                                    FOREXRISK PRO
+                                </h1>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-gray)' }}>
+                                    <span className="status-dot"></span>
+                                    <span>SISTEMA CONECTADO • {lastUpdate}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={onRefresh} disabled={isRefreshing} className="btn">
+                            <RefreshIcon spinning={isRefreshing} />
+                            <span style={{ marginLeft: '0.5rem' }}>REFRESH</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+        );
+
+        // PairCard Component
+        const PairCard = ({ pair, onAnalyze, isBestOpportunity }) => {
+            const { symbol, name, type, price, ma50, ma200, volatility } = pair;
+            const trend = getTrendLabel(price, ma50, ma200);
+            const score = calculateOpportunityScore(pair);
+
+            const trendConfig = {
+                'ALCISTA': { icon: <TrendingUpIcon />, color: '#00ff00' },
+                'BAJISTA': { icon: <TrendingDownIcon />, color: '#ff0040' },
+                'RANGO': { icon: <MinusIcon />, color: '#808080' },
+            };
+
+            const config = trendConfig[trend];
+
+            return (
+                <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`} style={{ position: 'relative' }}>
+                    <div className="score-badge">
+                        SCORE: {score}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', marginTop: '1rem' }}>
+                        <div>
+                            <h3 className="neon-text" style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem' }}>
+                                {symbol}
+                            </h3>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', textTransform: 'uppercase' }}>{name}</p>
+                        </div>
+                        <div style={{ color: config.color, fontSize: '1.5rem' }}>
+                            {config.icon}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO ACTUAL</p>
+                        <p style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
+                            {price.toFixed(symbol === 'XAUUSD' ? 2 : 4)}
+                        </p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                        <div>
+                            <p style={{ color: 'var(--text-gray)' }}>TENDENCIA</p>
+                            <p style={{ fontWeight: '700', color: config.color }}>{trend}</p>
+                        </div>
+                        <div>
+                            <p style={{ color: 'var(--text-gray)' }}>VOLATILIDAD</p>
+                            <p style={{ fontWeight: '700' }}>{volatility} PIPS</p>
+                        </div>
+                    </div>
+
+                    <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
+                        ANALIZAR
+                    </button>
+                </div>
+            );
+        };
+
+        // BiasBox Component
+        const BiasBox = ({ bias, explanation }) => {
+            const biasConfig = {
+                'COMPRAR': { icon: <TrendingUpIcon />, bg: '#003300', border: '#00ff00' },
+                'VENDER': { icon: <TrendingDownIcon />, bg: '#330000', border: '#ff0040' },
+                'NEUTRO': { icon: <MinusIcon />, bg: '#1a1a1a', border: '#808080' },
+            };
+
+            const config = biasConfig[bias];
+
+            return (
+                <div style={{ background: config.bg, border: `3px solid ${config.border}`, padding: '2rem', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', fontSize: '3rem' }}>
+                        {config.icon}
+                    </div>
+                    <h3 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '1rem', color: config.border }}>
+                        {bias}
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>{explanation}</p>
+                </div>
+            );
+        };
+
+        // RiskPanel Component
+        const RiskPanel = ({ pair, profile }) => {
+            const [stopLoss, setStopLoss] = useState(50);
+            const [takeProfit, setTakeProfit] = useState(100);
+            const [tradeType, setTradeType] = useState('Buy');
+
+            const positionData = calculatePositionSize(profile, stopLoss, pair.symbol);
+            const profitAmount = calculatePipValue(pair.symbol, positionData.lotSize) * takeProfit;
+            const riskReward = (takeProfit / stopLoss).toFixed(2);
+
+            return (
+                <div className="card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                        <CalculatorIcon />
+                        <h3 style={{ fontSize: '1.25rem' }}>GESTIÓN DE RIESGO</h3>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                STOP LOSS (PIPS)
+                            </label>
+                            <input type="number" value={stopLoss} onChange={(e) => setStopLoss(parseFloat(e.target.value))} className="input-field" />
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                TAKE PROFIT (PIPS)
+                            </label>
+                            <input type="number" value={takeProfit} onChange={(e) => setTakeProfit(parseFloat(e.target.value))} className="input-field" />
+                        </div>
+
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                TIPO DE OPERACIÓN
+                            </label>
+                            <select value={tradeType} onChange={(e) => setTradeType(e.target.value)} className="input-field">
+                                <option value="Buy">BUY</option>
+                                <option value="Sell">SELL</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', padding: '1rem' }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--neon-red)' }}>RESULTADOS</h4>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', fontSize: '0.875rem' }}>
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>RIESGO</p>
+                                <p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ff0040' }}>
+                                    ${positionData.riskAmount.toFixed(2)}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>BENEFICIO</p>
+                                <p style={{ fontSize: '1.25rem', fontWeight: '700', color: '#00ff00' }}>
+                                    ${profitAmount.toFixed(2)}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>LOTES</p>
+                                <p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{positionData.lotSize}</p>
+                            </div>
+
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>R:R</p>
+                                <p style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--neon-red)' }}>1:{riskReward}</p>
+                            </div>
+
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>VALOR PIP</p>
+                                <p style={{ fontWeight: '600' }}>${positionData.pipValue.toFixed(2)}</p>
+                            </div>
+
+                            <div>
+                                <p style={{ color: 'var(--text-gray)', fontSize: '0.75rem' }}>MARGEN</p>
+                                <p style={{ fontWeight: '600' }}>${positionData.marginRequired.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+                        EJECUTAR {tradeType.toUpperCase()}
+                    </button>
+                </div>
+            );
+        };
+
+        // AnalysisPanel Component
+        const AnalysisPanel = ({ pair, onClose, profile }) => {
+            if (!pair) return null;
+
+            const { symbol, name, price, ma50, ma200, volatility } = pair;
+            const { bias, explanation } = calculateBias(price, ma50, ma200);
+
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+                        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                            <div style={{ background: 'var(--dark-surface)', border: '2px solid var(--neon-red)', padding: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                                    <div>
+                                        <h2 className="neon-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
+                                            {symbol}
+                                        </h2>
+                                        <p style={{ color: 'var(--text-gray)', textTransform: 'uppercase', fontSize: '0.875rem' }}>{name}</p>
+                                    </div>
+                                    <button onClick={onClose} className="btn">
+                                        <XIcon />
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        <div className="card">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                                <BarChartIcon />
+                                                <h3 style={{ fontSize: '1.25rem' }}>DATOS DEL MERCADO</h3>
+                                            </div>
+
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO</p>
+                                                <p style={{ fontSize: '2.5rem', fontWeight: '900', fontFamily: 'Orbitron' }}>
+                                                    {price.toFixed(symbol === 'XAUUSD' ? 2 : 4)}
+                                                </p>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                                                <div>
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 50</p>
+                                                    <p style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+                                                        {ma50.toFixed(symbol === 'XAUUSD' ? 2 : 4)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>MA 200</p>
+                                                    <p style={{ fontSize: '1.25rem', fontWeight: '700' }}>
+                                                        {ma200.toFixed(symbol === 'XAUUSD' ? 2 : 4)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>VOLATILIDAD</p>
+                                                <p style={{ fontSize: '1.25rem', fontWeight: '700' }}>{volatility} PIPS</p>
+                                            </div>
+                                        </div>
+
+                                        <BiasBox bias={bias} explanation={explanation} />
+                                    </div>
+
+                                    <div>
+                                        <RiskPanel pair={pair} profile={profile} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ProfilePanel Component
+        const ProfilePanel = ({ onClose, profile, onSave }) => {
+            const [formData, setFormData] = useState(profile);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData);
+                onClose();
+            };
+
+            return (
+                <div className="modal-overlay">
+                    <div style={{ minHeight: '100vh', padding: '2rem', display: 'flex', alignItems: 'center' }}>
+                        <div className="card" style={{ maxWidth: '700px', margin: '0 auto', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                <UserIcon />
+                                <h2 style={{ fontSize: '1.75rem' }}>PERFIL DE TRADING</h2>
+                            </div>
+
+                            <form onSubmit={handleSubmit}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                            CUENTA
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={formData.accountSize}
+                                            onChange={(e) => setFormData({...formData, accountSize: parseFloat(e.target.value)})}
+                                            className="input-field"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                            RIESGO (%)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={formData.riskPercentage}
+                                            onChange={(e) => setFormData({...formData, riskPercentage: parseFloat(e.target.value)})}
+                                            className="input-field"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                            APALANCAMIENTO
+                                        </label>
+                                        <select
+                                            value={formData.leverage}
+                                            onChange={(e) => setFormData({...formData, leverage: parseFloat(e.target.value)})}
+                                            className="input-field"
+                                        >
+                                            <option value="30">1:30</option>
+                                            <option value="50">1:50</option>
+                                            <option value="100">1:100</option>
+                                            <option value="200">1:200</option>
+                                            <option value="500">1:500</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                            MONEDA
+                                        </label>
+                                        <select
+                                            value={formData.baseCurrency}
+                                            onChange={(e) => setFormData({...formData, baseCurrency: e.target.value})}
+                                            className="input-field"
+                                        >
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.5rem' }}>
+                                        PERFIL DE RIESGO
+                                    </label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                        {['Conservador', 'Moderado', 'Agresivo'].map((type) => (
+                                            <button
+                                                key={type}
+                                                type="button"
+                                                onClick={() => setFormData({...formData, riskProfile: type})}
+                                                className={formData.riskProfile === type ? 'btn btn-primary' : 'btn'}
+                                                style={{ fontSize: '0.875rem', padding: '0.75rem' }}
+                                            >
+                                                {type.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                                        GUARDAR
+                                    </button>
+                                    <button type="button" onClick={onClose} className="btn">
+                                        CANCELAR
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // App Component Principal
+        const App = () => {
+            const [pairs, setPairs] = useState([]);
+            const [selectedPair, setSelectedPair] = useState(null);
+            const [showProfile, setShowProfile] = useState(false);
+            const [isRefreshing, setIsRefreshing] = useState(false);
+            const [profile, setProfile] = useState(getProfile());
+            const [lastUpdate, setLastUpdate] = useState('--:--');
+
+            useEffect(() => {
+                loadData();
+                // Auto-refresh cada 30 segundos
+                const interval = setInterval(() => loadData(false), 30000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const loadData = async (showLoading = true) => {
+                if (showLoading) setIsRefreshing(true);
+
+                try {
+                    const data = await fetchRealForexData();
+                    setPairs(data);
+
+                    const now = new Date();
+                    setLastUpdate(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                } finally {
+                    if (showLoading) setIsRefreshing(false);
+                }
+            };
+
+            const handleSaveProfile = (newProfile) => {
+                setProfile(newProfile);
+                saveProfile(newProfile);
+            };
+
+            // Identificar mejor oportunidad
+            const bestPair = pairs.length > 0 
+                ? pairs.reduce((best, current) => 
+                    calculateOpportunityScore(current) > calculateOpportunityScore(best) ? current : best
+                  )
+                : null;
+
+            return (
+                <div>
+                    <Header onRefresh={() => loadData(true)} isRefreshing={isRefreshing} lastUpdate={lastUpdate} />
+
+                    <div style={{ background: 'var(--dark-elevated)', borderBottom: '1px solid var(--border-dark)' }}>
+                        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem 1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', fontSize: '0.875rem' }}>
+                                    <div>
+                                        <span style={{ color: 'var(--text-gray)' }}>CUENTA: </span>
+                                        <span style={{ fontWeight: '700', color: 'var(--neon-red)' }}>${profile.accountSize.toLocaleString()}</span>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: 'var(--text-gray)' }}>RIESGO: </span>
+                                        <span style={{ fontWeight: '700' }}>{profile.riskPercentage}%</span>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: 'var(--text-gray)' }}>APALANCAMIENTO: </span>
+                                        <span style={{ fontWeight: '700' }}>1:{profile.leverage}</span>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: 'var(--text-gray)' }}>PERFIL: </span>
+                                        <span style={{ fontWeight: '700' }}>{profile.riskProfile.toUpperCase()}</span>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setShowProfile(true)} className="btn" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }}>
+                                    <SettingsIcon />
+                                    <span style={{ marginLeft: '0.5rem' }}>CONFIG</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                                MERCADOS PRINCIPALES
+                            </h2>
+                            <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
+                                DATOS EN TIEMPO REAL • ANÁLISIS AUTOMATIZADO
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                            {pairs.map((pair) => (
+                                <PairCard
+                                    key={pair.symbol}
+                                    pair={pair}
+                                    onAnalyze={setSelectedPair}
+                                    isBestOpportunity={bestPair && pair.symbol === bestPair.symbol}
+                                />
+                            ))}
+                        </div>
+                    </main>
+
+                    {selectedPair && (
+                        <AnalysisPanel
+                            pair={selectedPair}
+                            onClose={() => setSelectedPair(null)}
+                            profile={profile}
+                        />
+                    )}
+
+                    {showProfile && (
+                        <ProfilePanel
+                            onClose={() => setShowProfile(false)}
+                            profile={profile}
+                            onSave={handleSaveProfile}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        // Renderizar
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
