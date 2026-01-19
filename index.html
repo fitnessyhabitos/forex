@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOREXRISK PRO • ULTIMATE TRADING EDITION</title>
+    <title>FOREXRISK PRO • LIVE STREAMING</title>
 
-    <!-- React y ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 
@@ -147,22 +144,6 @@
             font-size: 0.75rem;
         }
 
-        .input-field {
-            background: var(--dark-elevated);
-            border: 1px solid var(--border-dark);
-            color: var(--text-white);
-            padding: 0.75rem 1rem;
-            width: 100%;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1rem;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--neon-red);
-            box-shadow: 0 0 10px rgba(255, 0, 64, 0.3);
-        }
-
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -187,22 +168,9 @@
             animation: pulse 2s infinite;
         }
 
-        .signal-buy {
-            background: var(--neon-green);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
-        }
-
-        .signal-sell {
-            background: var(--neon-red);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px rgba(255, 0, 64, 0.8);
-        }
-
-        .signal-neutral {
-            background: var(--text-gray);
-            color: var(--dark-bg);
-        }
+        .signal-buy { background: var(--neon-green); color: var(--dark-bg); box-shadow: 0 0 20px rgba(0, 255, 0, 0.8); }
+        .signal-sell { background: var(--neon-red); color: var(--dark-bg); box-shadow: 0 0 20px rgba(255, 0, 64, 0.8); }
+        .signal-neutral { background: var(--text-gray); color: var(--dark-bg); }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -225,17 +193,9 @@
             margin-bottom: 1rem;
         }
 
-        .indicator-box.bullish {
-            border-left-color: var(--neon-green);
-        }
-
-        .indicator-box.bearish {
-            border-left-color: var(--neon-red);
-        }
-
-        .indicator-box.neutral {
-            border-left-color: var(--text-gray);
-        }
+        .indicator-box.bullish { border-left-color: var(--neon-green); }
+        .indicator-box.bearish { border-left-color: var(--neon-red); }
+        .indicator-box.neutral { border-left-color: var(--text-gray); }
 
         .probability-bar {
             height: 30px;
@@ -269,24 +229,44 @@
             transform: translateY(-5px);
         }
 
-        .loading-skeleton {
-            background: linear-gradient(90deg, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
+        .live-badge {
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            animation: pulse 2s infinite;
         }
 
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        .price-change {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            animation: priceFlash 0.3s;
         }
 
-        select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ff0040' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
-            appearance: none;
+        @keyframes priceFlash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); color: var(--neon-cyan); }
+            100% { transform: scale(1); }
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            display: inline-block;
+        }
+
+        .status-dot.connected {
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .status-dot.disconnected {
+            background: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red);
         }
 
         @media (max-width: 768px) {
@@ -302,51 +282,32 @@
 
         // ==================== CONFIGURACIÓN ====================
 
-        const API_KEY = '04eec7507ab745e18e787977413c2649';
-        const API_BASE = 'https://api.twelvedata.com';
-        const REQUEST_DELAY = 10000;
-        const REFRESH_CYCLE = 60000;
+        const FINNHUB_API_KEY = 'd5n740hr01qh5ppc15r0d5n740hr01qh5ppc15rg';
+        const FINNHUB_WS = 'wss://ws.finnhub.io';
 
         const PAIRS = [
-            { symbol: 'EUR/USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar' },
-            { symbol: 'GBP/USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar' },
-            { symbol: 'USD/JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen' },
-            { symbol: 'EUR/JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen' },
-            { symbol: 'XAU/USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar' },
+            { symbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5 },
+            { symbol: 'OANDA:GBP_USD', displaySymbol: 'GBPUSD', name: 'British Pound / US Dollar', decimals: 5 },
+            { symbol: 'OANDA:USD_JPY', displaySymbol: 'USDJPY', name: 'US Dollar / Japanese Yen', decimals: 3 },
+            { symbol: 'OANDA:EUR_JPY', displaySymbol: 'EURJPY', name: 'Euro / Japanese Yen', decimals: 3 },
+            { symbol: 'OANDA:XAU_USD', displaySymbol: 'XAUUSD', name: 'Gold / US Dollar', decimals: 2 },
         ];
 
-        // ==================== INDICADORES TÉCNICOS ====================
+        // ==================== FUNCIONES TÉCNICAS ====================
 
         const calculateRSI = (prices, period = 14) => {
             if (prices.length < period + 1) return 50;
-
             let gains = 0, losses = 0;
             for (let i = prices.length - period; i < prices.length; i++) {
                 const change = prices[i] - prices[i - 1];
                 if (change > 0) gains += change;
                 else losses += Math.abs(change);
             }
-
             const avgGain = gains / period;
             const avgLoss = losses / period;
-
             if (avgLoss === 0) return 100;
             const rs = avgGain / avgLoss;
             return 100 - (100 / (1 + rs));
-        };
-
-        const calculateMACD = (prices) => {
-            if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
-
-            const ema12 = calculateEMA(prices, 12);
-            const ema26 = calculateEMA(prices, 26);
-            const macd = ema12 - ema26;
-
-            // Simplificado: signal line aproximada
-            const signal = macd * 0.9;
-            const histogram = macd - signal;
-
-            return { macd, signal, histogram };
         };
 
         const calculateEMA = (prices, period) => {
@@ -359,32 +320,38 @@
             return ema;
         };
 
+        const calculateMACD = (prices) => {
+            if (prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+            const ema12 = calculateEMA(prices, 12);
+            const ema26 = calculateEMA(prices, 26);
+            const macd = ema12 - ema26;
+            const signal = macd * 0.9;
+            return { macd, signal, histogram: macd - signal };
+        };
+
         const calculateBollingerBands = (prices, period = 20, stdDev = 2) => {
             if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
-
             const slice = prices.slice(-period);
             const middle = slice.reduce((a, b) => a + b, 0) / period;
             const variance = slice.reduce((sum, price) => sum + Math.pow(price - middle, 2), 0) / period;
             const std = Math.sqrt(variance);
-
-            return {
-                upper: middle + (std * stdDev),
-                middle: middle,
-                lower: middle - (std * stdDev)
-            };
+            return { upper: middle + (std * stdDev), middle, lower: middle - (std * stdDev) };
         };
 
-        // ==================== ANÁLISIS DE SEÑALES ====================
+        const calculateMA = (prices, period) => {
+            if (prices.length < period) return prices[prices.length - 1] || 0;
+            const slice = prices.slice(-period);
+            return slice.reduce((a, b) => a + b, 0) / period;
+        };
 
         const analyzeSignals = (pair, priceHistory) => {
             if (!priceHistory || priceHistory.length < 30) {
                 return {
-                    signal: 'NEUTRAL',
-                    confidence: 0,
-                    reasons: ['Insuficientes datos históricos'],
-                    entry: pair.price,
-                    stopLoss: pair.price * 0.995,
-                    takeProfit: pair.price * 1.01
+                    signal: 'NEUTRAL', confidence: 0,
+                    reasons: ['Acumulando datos (necesita 30+ ticks)'],
+                    entry: pair.price, stopLoss: pair.price * 0.995, takeProfit: pair.price * 1.01,
+                    rsi: 50, macd: { macd: 0, signal: 0, histogram: 0 },
+                    bb: { upper: 0, middle: 0, lower: 0 }
                 };
             }
 
@@ -392,237 +359,122 @@
             const macd = calculateMACD(priceHistory);
             const bb = calculateBollingerBands(priceHistory);
             const currentPrice = pair.price;
+            const ma50 = calculateMA(priceHistory, Math.min(50, priceHistory.length));
+            const ma200 = calculateMA(priceHistory, Math.min(200, priceHistory.length));
 
-            let signal = 'NEUTRAL';
-            let confidence = 0;
+            let signal = 'NEUTRAL', confidence = 0;
             const reasons = [];
 
-            // RSI Signals
-            if (rsi < 30) {
-                confidence += 30;
-                reasons.push('RSI en sobreventa (<30)');
-                signal = 'BUY';
-            } else if (rsi > 70) {
-                confidence += 30;
-                reasons.push('RSI en sobrecompra (>70)');
-                signal = 'SELL';
-            }
+            if (rsi < 30) { confidence += 30; reasons.push(`RSI sobreventa (${rsi.toFixed(1)})`); signal = 'BUY'; }
+            else if (rsi > 70) { confidence += 30; reasons.push(`RSI sobrecompra (${rsi.toFixed(1)})`); signal = 'SELL'; }
 
-            // MACD Signals
             if (macd.histogram > 0 && macd.macd > macd.signal) {
-                confidence += 25;
-                reasons.push('MACD cruce alcista');
+                confidence += 25; reasons.push('MACD cruce alcista');
                 if (signal === 'NEUTRAL') signal = 'BUY';
             } else if (macd.histogram < 0 && macd.macd < macd.signal) {
-                confidence += 25;
-                reasons.push('MACD cruce bajista');
+                confidence += 25; reasons.push('MACD cruce bajista');
                 if (signal === 'NEUTRAL') signal = 'SELL';
             }
 
-            // Bollinger Bands
             if (currentPrice < bb.lower) {
-                confidence += 20;
-                reasons.push('Precio bajo banda inferior Bollinger');
+                confidence += 20; reasons.push('Precio bajo Bollinger');
                 if (signal === 'NEUTRAL') signal = 'BUY';
             } else if (currentPrice > bb.upper) {
-                confidence += 20;
-                reasons.push('Precio sobre banda superior Bollinger');
+                confidence += 20; reasons.push('Precio sobre Bollinger');
                 if (signal === 'NEUTRAL') signal = 'SELL';
             }
 
-            // Tendencia (MA50 vs MA200)
-            if (pair.ma50 > pair.ma200 && currentPrice > pair.ma50) {
-                confidence += 15;
-                reasons.push('Tendencia alcista confirmada');
+            if (ma50 > ma200 && currentPrice > ma50) {
+                confidence += 15; reasons.push('Tendencia alcista');
                 if (signal === 'NEUTRAL') signal = 'BUY';
-            } else if (pair.ma50 < pair.ma200 && currentPrice < pair.ma50) {
-                confidence += 15;
-                reasons.push('Tendencia bajista confirmada');
+            } else if (ma50 < ma200 && currentPrice < ma50) {
+                confidence += 15; reasons.push('Tendencia bajista');
                 if (signal === 'NEUTRAL') signal = 'SELL';
             }
 
-            // Volatilidad
-            if (pair.volatility > 50 && pair.volatility < 100) {
-                confidence += 10;
-                reasons.push('Volatilidad óptima para trading');
-            }
+            const volatility = pair.volatility || 50;
+            if (volatility > 30 && volatility < 100) { confidence += 10; reasons.push('Volatilidad óptima'); }
 
-            // Calcular niveles
-            const atr = pair.volatility * (currentPrice / 10000); // ATR aproximado
-            let entry, stopLoss, takeProfit;
+            const atr = ((bb.upper - bb.lower) / 2) || (currentPrice * 0.002);
+            let entry = currentPrice, stopLoss, takeProfit;
 
             if (signal === 'BUY') {
-                entry = currentPrice;
-                stopLoss = currentPrice - (atr * 2);
+                stopLoss = currentPrice - (atr * 1.5);
                 takeProfit = currentPrice + (atr * 3);
             } else if (signal === 'SELL') {
-                entry = currentPrice;
-                stopLoss = currentPrice + (atr * 2);
+                stopLoss = currentPrice + (atr * 1.5);
                 takeProfit = currentPrice - (atr * 3);
             } else {
-                entry = currentPrice;
                 stopLoss = currentPrice * 0.995;
                 takeProfit = currentPrice * 1.01;
             }
 
-            return {
-                signal,
-                confidence: Math.min(confidence, 100),
-                reasons,
-                rsi,
-                macd,
-                bb,
-                entry,
-                stopLoss,
-                takeProfit,
-                atr
-            };
+            return { signal, confidence: Math.min(confidence, 100), reasons, rsi, macd, bb, entry, stopLoss, takeProfit, atr, ma50, ma200 };
         };
-
-        // ==================== PROBABILIDADES DE RATIOS ====================
 
         const calculateRatioProbabilities = (pair, analysis) => {
-            const { volatility, price } = pair;
-            const { signal, confidence } = analysis;
-
-            // Volatilidad normalizada (mayor volatilidad = menor probabilidad de ratios altos)
+            const { volatility = 50 } = pair;
+            const { confidence } = analysis;
             const volFactor = Math.max(0.3, Math.min(1, 100 / volatility));
-
-            // Confianza de señal (mayor confianza = mayor probabilidad)
             const confFactor = confidence / 100;
-
-            // Base probability ajustada
             const baseProbability = volFactor * confFactor * 0.8;
 
-            const ratios = [
-                { ratio: '1:1', pips: 50, probability: baseProbability * 90 },
-                { ratio: '1:1.5', pips: 75, probability: baseProbability * 75 },
-                { ratio: '1:2', pips: 100, probability: baseProbability * 60 },
-                { ratio: '1:2.5', pips: 125, probability: baseProbability * 50 },
-                { ratio: '1:3', pips: 150, probability: baseProbability * 40 },
-                { ratio: '1:4', pips: 200, probability: baseProbability * 30 },
-                { ratio: '1:5', pips: 250, probability: baseProbability * 20 },
+            return [
+                { ratio: '1:1', pips: 50, probability: Math.min(Math.round(baseProbability * 90), 95), expectedProfit: '500.00' },
+                { ratio: '1:1.5', pips: 75, probability: Math.min(Math.round(baseProbability * 75), 95), expectedProfit: '750.00' },
+                { ratio: '1:2', pips: 100, probability: Math.min(Math.round(baseProbability * 60), 95), expectedProfit: '1000.00' },
+                { ratio: '1:2.5', pips: 125, probability: Math.min(Math.round(baseProbability * 50), 95), expectedProfit: '1250.00' },
+                { ratio: '1:3', pips: 150, probability: Math.min(Math.round(baseProbability * 40), 95), expectedProfit: '1500.00' },
+                { ratio: '1:4', pips: 200, probability: Math.min(Math.round(baseProbability * 30), 95), expectedProfit: '2000.00' },
+                { ratio: '1:5', pips: 250, probability: Math.min(Math.round(baseProbability * 20), 95), expectedProfit: '2500.00' },
             ];
-
-            return ratios.map(r => ({
-                ...r,
-                probability: Math.min(Math.round(r.probability), 95),
-                expectedProfit: (r.pips * 10).toFixed(2) // Aproximado por lote estándar
-            }));
-        };
-
-        // ==================== UTILIDADES ====================
-
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        const getProfile = () => {
-            const stored = localStorage.getItem('forexrisk-profile');
-            return stored ? JSON.parse(stored) : {
-                accountSize: 10000,
-                riskPercentage: 2,
-                leverage: 30,
-                baseCurrency: 'USD',
-                riskProfile: 'Moderado',
-            };
-        };
-
-        const saveProfile = (profile) => {
-            localStorage.setItem('forexrisk-profile', JSON.stringify(profile));
-        };
-
-        const fetchSinglePair = async (symbol) => {
-            try {
-                const url = `${API_BASE}/quote?symbol=${symbol}&apikey=${API_KEY}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.code || !data.close) return null;
-
-                const price = parseFloat(data.close);
-                const open = parseFloat(data.open || price);
-                const high = parseFloat(data.high || price);
-                const low = parseFloat(data.low || price);
-
-                const variation = price * 0.02;
-                const ma50 = price - (Math.random() - 0.5) * variation;
-                const ma200 = price - (Math.random() - 0.3) * variation * 2;
-
-                const dailyRange = high - low;
-                const volatility = Math.max(10, Math.round(Math.abs(dailyRange / price) * 10000));
-
-                return {
-                    symbol: data.symbol,
-                    displaySymbol: symbol.replace('/', ''),
-                    name: data.name,
-                    price,
-                    open,
-                    high,
-                    low,
-                    ma50,
-                    ma200,
-                    volatility,
-                    timestamp: new Date().toISOString(),
-                };
-            } catch (error) {
-                return null;
-            }
-        };
-
-        const calculateOpportunityScore = (pair) => {
-            if (!pair.price) return 0;
-            const { price, ma50, ma200, volatility } = pair;
-
-            let score = 0;
-            if ((price > ma200 && ma50 > ma200) || (price < ma200 && ma50 < ma200)) score += 40;
-
-            const trendStrength = Math.abs(ma50 - ma200) / ma200;
-            score += Math.min(30, trendStrength * 1000);
-
-            const volatilityScore = volatility >= 40 && volatility <= 80 ? 20 : 10;
-            score += volatilityScore;
-
-            if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) score += 10;
-
-            return Math.min(100, Math.round(score));
         };
 
         // ==================== COMPONENTES ====================
 
-        const TrendingUpIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
-        const TrendingDownIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>;
-        const RefreshIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>;
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const BarChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
         const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
 
-        const Header = ({ lastUpdate, requestCount }) => (
+        const Header = ({ connected, tickCount, lastUpdate }) => (
             <header style={{ background: 'var(--dark-surface)', borderBottom: '2px solid var(--neon-red)', padding: '1.5rem' }}>
                 <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                        <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
-                        <span style={{ background: 'var(--neon-green)', color: '#000', padding: '0.25rem 0.75rem', fontSize: '0.7rem', fontWeight: '900' }}>ULTIMATE</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h1 style={{ fontSize: '2rem', color: 'var(--neon-red)' }}>FOREXRISK PRO</h1>
+                            <span className="live-badge">LIVE STREAM</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--dark-elevated)', padding: '0.5rem 1rem', border: '1px solid var(--border-dark)' }}>
+                            <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
+                            <span style={{ fontSize: '0.875rem', fontFamily: 'Orbitron' }}>
+                                {connected ? `🔴 EN VIVO • ${tickCount} ticks` : '⚠️ CONECTANDO...'}
+                            </span>
+                        </div>
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                        🎯 Análisis Técnico Avanzado • Señales Automatizadas • Probabilidades de Éxito • {lastUpdate} • {requestCount} requests
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                        ⚡ WebSocket Finnhub • Actualización automática en tiempo real • {lastUpdate}
                     </div>
                 </div>
             </header>
         );
 
-        const PairCard = ({ pair, onAnalyze, isBestOpportunity, isLoading }) => {
-            if (isLoading || !pair.price) {
+        const PairCard = ({ pair, onAnalyze, isBestOpportunity }) => {
+            const { displaySymbol, name, price, open, decimals } = pair;
+
+            if (!price) {
                 return (
-                    <div className="card loading">
-                        <div className="loading-skeleton" style={{ height: '200px' }}></div>
-                        <p style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '1rem' }}>Cargando...</p>
+                    <div className="card">
+                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-gray)' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+                            <p>Conectando stream...</p>
+                        </div>
                     </div>
                 );
             }
 
-            const { displaySymbol, name, price, open } = pair;
-            const score = calculateOpportunityScore(pair);
-            const change = ((price - open) / open * 100).toFixed(2);
+            const change = open ? ((price - open) / open * 100).toFixed(2) : '0.00';
             const changeColor = change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            const score = pair.score || 0;
 
             return (
                 <div className={`card ${isBestOpportunity ? 'best-opportunity' : ''}`}>
@@ -638,15 +490,18 @@
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>PRECIO ACTUAL</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>🔴 PRECIO EN VIVO</p>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                            <p style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
-                                {displaySymbol === 'XAUUSD' ? price.toFixed(2) : price.toFixed(4)}
+                            <p className="price-change" style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
+                                {price.toFixed(decimals)}
                             </p>
                             <p style={{ fontSize: '1rem', fontWeight: '700', color: changeColor }}>
                                 {change >= 0 ? '+' : ''}{change}%
                             </p>
                         </div>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>
+                            ⚡ Auto-refresh • Streaming
+                        </p>
                     </div>
 
                     <button onClick={() => onAnalyze(pair)} className="btn btn-primary" style={{ width: '100%' }}>
@@ -661,20 +516,17 @@
             const chartInstance = useRef(null);
 
             useEffect(() => {
-                if (!chartRef.current || !priceHistory || priceHistory.length < 5) return;
+                if (!chartRef.current || !priceHistory || priceHistory.length < 10) return;
 
                 const ctx = chartRef.current.getContext('2d');
-
                 if (chartInstance.current) chartInstance.current.destroy();
 
-                // Generar velas simuladas basadas en el historial
-                const candles = priceHistory.slice(-30).map((price, i) => {
-                    const volatility = pair.volatility / 10000;
-                    const open = i === 0 ? price : priceHistory[i - 1];
+                const candles = priceHistory.slice(-50).map((price, i) => {
+                    const volatility = 0.001;
+                    const open = i === 0 ? price : priceHistory[Math.max(0, priceHistory.length - 50 + i - 1)];
                     const close = price;
-                    const high = Math.max(open, close) + (Math.random() * volatility * price);
-                    const low = Math.min(open, close) - (Math.random() * volatility * price);
-
+                    const high = Math.max(open, close) * (1 + Math.random() * volatility);
+                    const low = Math.min(open, close) * (1 - Math.random() * volatility);
                     return { x: i, o: open, h: high, l: low, c: close };
                 });
 
@@ -684,53 +536,29 @@
                         datasets: [{
                             label: pair.displaySymbol,
                             data: candles,
-                            color: {
-                                up: '#00ff00',
-                                down: '#ff0040',
-                                unchanged: '#808080',
-                            },
-                            borderColor: {
-                                up: '#00ff00',
-                                down: '#ff0040',
-                                unchanged: '#808080',
-                            }
+                            color: { up: '#00ff00', down: '#ff0040', unchanged: '#808080' },
+                            borderColor: { up: '#00ff00', down: '#ff0040', unchanged: '#808080' }
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
+                        plugins: { legend: { display: false } },
                         scales: {
-                            x: {
-                                display: true,
-                                grid: { color: '#1a1a1a' },
-                                ticks: { color: '#808080' }
-                            },
-                            y: {
-                                display: true,
-                                grid: { color: '#1a1a1a' },
-                                ticks: { color: '#808080' }
-                            }
+                            x: { display: true, grid: { color: '#1a1a1a' }, ticks: { color: '#808080' } },
+                            y: { display: true, grid: { color: '#1a1a1a' }, ticks: { color: '#808080' } }
                         }
                     }
                 });
 
-                return () => {
-                    if (chartInstance.current) chartInstance.current.destroy();
-                };
-            }, [priceHistory, pair]);
+                return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+            }, [priceHistory]);
 
-            if (!priceHistory || priceHistory.length < 5) {
-                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando datos para gráfico...</div>;
+            if (!priceHistory || priceHistory.length < 10) {
+                return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>Acumulando ticks para gráfico... ({priceHistory?.length || 0}/10)</div>;
             }
 
-            return (
-                <div className="chart-container">
-                    <canvas ref={chartRef}></canvas>
-                </div>
-            );
+            return <div className="chart-container"><canvas ref={chartRef}></canvas></div>;
         };
 
         const AdvancedAnalysisPanel = ({ pair, onClose, priceHistory }) => {
@@ -738,7 +566,6 @@
 
             const analysis = analyzeSignals(pair, priceHistory);
             const ratios = calculateRatioProbabilities(pair, analysis);
-
             const signalClass = analysis.signal === 'BUY' ? 'signal-buy' : analysis.signal === 'SELL' ? 'signal-sell' : 'signal-neutral';
 
             return (
@@ -749,12 +576,11 @@
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                                     <div>
                                         <h2 className="neon-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{pair.displaySymbol}</h2>
-                                        <p style={{ color: 'var(--text-gray)' }}>{pair.name}</p>
+                                        <p style={{ color: 'var(--text-gray)' }}>{pair.name} • 🔴 Live: {pair.price.toFixed(pair.decimals)}</p>
                                     </div>
                                     <button onClick={onClose} className="btn btn-small"><XIcon /></button>
                                 </div>
 
-                                {/* Señal Principal */}
                                 <div className="card" style={{ marginBottom: '2rem', padding: '2rem', textAlign: 'center' }}>
                                     <h3 style={{ marginBottom: '1rem' }}>SEÑAL DE TRADING</h3>
                                     <div className={`signal-badge ${signalClass}`} style={{ fontSize: '2rem', padding: '1rem 2rem' }}>
@@ -764,22 +590,18 @@
                                         Confianza: {analysis.confidence}%
                                     </div>
                                     <div className="probability-bar" style={{ marginTop: '1rem' }}>
-                                        <div className="probability-fill" style={{ width: `${analysis.confidence}%` }}>
-                                            {analysis.confidence}%
-                                        </div>
+                                        <div className="probability-fill" style={{ width: `${analysis.confidence}%` }}>{analysis.confidence}%</div>
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                                    {/* Gráfico de Velas */}
                                     <div className="card">
                                         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <BarChartIcon /> GRÁFICO DE VELAS
+                                            <BarChartIcon /> GRÁFICO EN TIEMPO REAL
                                         </h3>
                                         <CandlestickChart priceHistory={priceHistory} pair={pair} />
                                     </div>
 
-                                    {/* Indicadores Técnicos */}
                                     <div className="card">
                                         <h3 style={{ marginBottom: '1rem' }}>INDICADORES TÉCNICOS</h3>
 
@@ -789,7 +611,7 @@
                                                 <span style={{ fontFamily: 'Orbitron', fontSize: '1.25rem' }}>{analysis.rsi.toFixed(2)}</span>
                                             </div>
                                             <div style={{ fontSize: '0.875rem', color: 'var(--text-gray)' }}>
-                                                {analysis.rsi < 30 ? 'Sobreventa - Señal de compra' : analysis.rsi > 70 ? 'Sobrecompra - Señal de venta' : 'Zona neutral'}
+                                                {analysis.rsi < 30 ? 'Sobreventa - Señal compra' : analysis.rsi > 70 ? 'Sobrecompra - Señal venta' : 'Zona neutral'}
                                             </div>
                                         </div>
 
@@ -799,35 +621,27 @@
                                                 <span style={{ fontFamily: 'Orbitron' }}>{analysis.macd.histogram > 0 ? '↑' : '↓'}</span>
                                             </div>
                                             <div style={{ fontSize: '0.875rem' }}>
-                                                <div>Línea MACD: {analysis.macd.macd.toFixed(6)}</div>
-                                                <div>Señal: {analysis.macd.signal.toFixed(6)}</div>
                                                 <div>Histograma: {analysis.macd.histogram.toFixed(6)}</div>
                                             </div>
                                         </div>
 
                                         <div className="indicator-box neutral">
-                                            <div style={{ marginBottom: '0.5rem' }}><strong>Bandas de Bollinger</strong></div>
+                                            <div style={{ marginBottom: '0.5rem' }}><strong>Bandas Bollinger</strong></div>
                                             <div style={{ fontSize: '0.875rem' }}>
-                                                <div>Superior: {analysis.bb.upper.toFixed(4)}</div>
-                                                <div>Media: {analysis.bb.middle.toFixed(4)}</div>
-                                                <div>Inferior: {analysis.bb.lower.toFixed(4)}</div>
-                                                <div style={{ marginTop: '0.5rem', color: pair.price < analysis.bb.lower ? 'var(--neon-green)' : pair.price > analysis.bb.upper ? 'var(--neon-red)' : 'var(--text-gray)' }}>
-                                                    {pair.price < analysis.bb.lower ? 'Precio bajo banda inferior - Señal alcista' : pair.price > analysis.bb.upper ? 'Precio sobre banda superior - Señal bajista' : 'Precio en rango normal'}
-                                                </div>
+                                                <div>Superior: {analysis.bb.upper.toFixed(pair.decimals)}</div>
+                                                <div>Media: {analysis.bb.middle.toFixed(pair.decimals)}</div>
+                                                <div>Inferior: {analysis.bb.lower.toFixed(pair.decimals)}</div>
                                             </div>
                                         </div>
 
-                                        <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)' }}>
-                                            <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Razones de la Señal:</strong>
-                                            {analysis.reasons.map((reason, i) => (
-                                                <div key={i} style={{ fontSize: '0.875rem', marginBottom: '0.25rem', color: 'var(--neon-cyan)' }}>
-                                                    • {reason}
-                                                </div>
+                                        <div style={{ padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)' }}>
+                                            <strong>Razones:</strong>
+                                            {analysis.reasons.map((r, i) => (
+                                                <div key={i} style={{ fontSize: '0.875rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>• {r}</div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Niveles de Trading */}
                                     <div className="card">
                                         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <TargetIcon /> NIVELES SUGERIDOS
@@ -835,52 +649,41 @@
 
                                         <div style={{ background: 'var(--dark-elevated)', padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--neon-cyan)' }}>
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>ENTRADA</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>ENTRADA</div>
                                                 <div style={{ fontSize: '1.5rem', fontWeight: '900', fontFamily: 'Orbitron', color: 'var(--neon-cyan)' }}>
-                                                    {analysis.entry.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
+                                                    {analysis.entry.toFixed(pair.decimals)}
                                                 </div>
                                             </div>
 
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                                 <div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>STOP LOSS</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>STOP LOSS</div>
                                                     <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-red)' }}>
-                                                        {analysis.stopLoss.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                                        {Math.abs(((analysis.stopLoss - analysis.entry) / analysis.entry * 10000).toFixed(0))} pips
+                                                        {analysis.stopLoss.toFixed(pair.decimals)}
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>TAKE PROFIT</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>TAKE PROFIT</div>
                                                     <div style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'Orbitron', color: 'var(--neon-green)' }}>
-                                                        {analysis.takeProfit.toFixed(pair.displaySymbol === 'XAUUSD' ? 2 : 4)}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
-                                                        {Math.abs(((analysis.takeProfit - analysis.entry) / analysis.entry * 10000).toFixed(0))} pips
+                                                        {analysis.takeProfit.toFixed(pair.decimals)}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div style={{ background: 'var(--dark-elevated)', padding: '1rem', fontSize: '0.875rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>Risk/Reward:</span>
                                                 <strong style={{ color: 'var(--neon-green)' }}>
                                                     1:{(Math.abs(analysis.takeProfit - analysis.entry) / Math.abs(analysis.stopLoss - analysis.entry)).toFixed(2)}
                                                 </strong>
                                             </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span>ATR (Volatilidad):</span>
-                                                <strong>{analysis.atr ? analysis.atr.toFixed(4) : 'N/A'}</strong>
-                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Probabilidades de Ratios */}
                                     <div className="card" style={{ gridColumn: 'span 2' }}>
-                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES DE ÉXITO POR RATIO R:R</h3>
+                                        <h3 style={{ marginBottom: '1.5rem' }}>📊 PROBABILIDADES POR RATIO R:R</h3>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                                             {ratios.map((ratio, i) => (
@@ -894,7 +697,9 @@
                                                     <div className="probability-bar">
                                                         <div className="probability-fill" style={{ 
                                                             width: `${ratio.probability}%`,
-                                                            background: ratio.probability > 70 ? 'linear-gradient(90deg, var(--neon-green), var(--neon-cyan))' : ratio.probability > 50 ? 'linear-gradient(90deg, var(--neon-cyan), var(--neon-yellow))' : 'linear-gradient(90deg, var(--neon-yellow), var(--neon-red))'
+                                                            background: ratio.probability > 70 ? 'linear-gradient(90deg, var(--neon-green), var(--neon-cyan))' : 
+                                                                       ratio.probability > 50 ? 'linear-gradient(90deg, var(--neon-cyan), var(--neon-yellow))' : 
+                                                                       'linear-gradient(90deg, var(--neon-yellow), var(--neon-red))'
                                                         }}>
                                                             {ratio.probability}%
                                                         </div>
@@ -909,11 +714,11 @@
                                         <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--dark-elevated)', border: '1px solid var(--border-dark)', fontSize: '0.875rem' }}>
                                             <strong>💡 Interpretación:</strong>
                                             <div style={{ marginTop: '0.5rem', color: 'var(--text-gray)' }}>
-                                                • <strong style={{ color: 'var(--neon-green)' }}>&gt;70%:</strong> Alta probabilidad - Ratio recomendado para esta operación<br/>
-                                                • <strong style={{ color: 'var(--neon-cyan)' }}>50-70%:</strong> Probabilidad moderada - Considerar según tu perfil de riesgo<br/>
-                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad - Ratio muy ambicioso para las condiciones actuales<br/>
+                                                • <strong style={{ color: 'var(--neon-green)' }}>&gt;70%:</strong> Alta probabilidad<br/>
+                                                • <strong style={{ color: 'var(--neon-cyan)' }}>50-70%:</strong> Probabilidad moderada<br/>
+                                                • <strong style={{ color: 'var(--neon-red)' }}>&lt;50%:</strong> Baja probabilidad<br/>
                                                 <br/>
-                                                <em>Probabilidades calculadas basadas en: Volatilidad actual ({pair.volatility} pips), Confianza de señal ({analysis.confidence}%), Condiciones del mercado.</em>
+                                                <em>Basado en: Confianza {analysis.confidence}% • Volatilidad del par • Datos en tiempo real</em>
                                             </div>
                                         </div>
                                     </div>
@@ -928,72 +733,116 @@
         // ==================== APP PRINCIPAL ====================
 
         const App = () => {
-            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, isLoading: true })));
+            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, open: null, volatility: 50, score: 0 })));
             const [priceHistories, setPriceHistories] = useState({});
             const [selectedPair, setSelectedPair] = useState(null);
+            const [connected, setConnected] = useState(false);
+            const [tickCount, setTickCount] = useState(0);
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
-            const [requestCount, setRequestCount] = useState(0);
-            const [isPaused, setIsPaused] = useState(false);
-            const loadingRef = useRef(false);
+            const wsRef = useRef(null);
 
+            // ========== WEBSOCKET - SIN DELAYS - AUTO REFRESH ==========
             useEffect(() => {
-                const handleVisibility = () => setIsPaused(document.hidden);
-                document.addEventListener('visibilitychange', handleVisibility);
-                return () => document.removeEventListener('visibilitychange', handleVisibility);
-            }, []);
+                console.log('🚀 Iniciando WebSocket - SIN delays - Auto-refresh activado');
+                const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
+                wsRef.current = socket;
 
-            const loadAllPairs = async () => {
-                if (loadingRef.current || isPaused) return;
-                loadingRef.current = true;
+                socket.addEventListener('open', () => {
+                    console.log('✅ WebSocket CONECTADO - Comenzando streaming automático');
+                    setConnected(true);
 
-                for (let i = 0; i < PAIRS.length; i++) {
-                    if (isPaused) break;
+                    // Suscripción INMEDIATA a todos los pares
+                    PAIRS.forEach(pair => {
+                        socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.symbol }));
+                        console.log('📡 Stream activado para:', pair.symbol);
+                    });
+                });
 
-                    const pairConfig = PAIRS[i];
-                    const data = await fetchSinglePair(pairConfig.symbol);
+                // Auto-refresh: Procesar CADA mensaje que llega
+                socket.addEventListener('message', (event) => {
+                    const data = JSON.parse(event.data);
 
-                    if (data) {
-                        setPairs(prev => prev.map(p => 
-                            p.symbol === pairConfig.symbol ? { ...data, isLoading: false } : p
-                        ));
+                    if (data.type === 'trade') {
+                        data.data.forEach(trade => {
+                            const pairConfig = PAIRS.find(p => p.symbol === trade.s);
+                            if (!pairConfig) return;
 
-                        setPriceHistories(prev => {
-                            const history = [...(prev[data.displaySymbol] || []), data.price];
-                            if (history.length > 50) history.shift();
-                            return { ...prev, [data.displaySymbol]: history };
+                            const price = trade.p;
+                            const timestamp = new Date(trade.t).toLocaleTimeString('es-ES');
+
+                            // Actualización INMEDIATA de precios
+                            setPairs(prev => prev.map(p => {
+                                if (p.symbol === pairConfig.symbol) {
+                                    const newOpen = p.open || price;
+
+                                    // Calcular volatilidad en tiempo real
+                                    const currentHistory = priceHistories[p.displaySymbol] || [];
+                                    const recentPrices = currentHistory.slice(-50);
+                                    const volatility = recentPrices.length > 10 
+                                        ? Math.round(((Math.max(...recentPrices) - Math.min(...recentPrices)) / price) * 10000)
+                                        : 50;
+
+                                    // Score en tiempo real
+                                    const allPrices = [...currentHistory, price];
+                                    const ma50 = calculateMA(allPrices, Math.min(50, allPrices.length));
+                                    const ma200 = calculateMA(allPrices, Math.min(200, allPrices.length));
+
+                                    let score = 0;
+                                    if ((price > ma200 && ma50 > ma200) || (price < ma200 && ma50 < ma200)) score += 40;
+                                    score += Math.min(30, Math.abs(ma50 - ma200) / ma200 * 1000);
+                                    score += volatility >= 40 && volatility <= 80 ? 20 : 10;
+                                    if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) score += 10;
+
+                                    return { ...p, price, open: newOpen, volatility, score: Math.min(100, Math.round(score)) };
+                                }
+                                return p;
+                            }));
+
+                            // Actualizar historial AUTOMÁTICAMENTE
+                            setPriceHistories(prev => {
+                                const history = [...(prev[pairConfig.displaySymbol] || []), price];
+                                if (history.length > 200) history.shift(); // Mantener últimos 200
+                                return { ...prev, [pairConfig.displaySymbol]: history };
+                            });
+
+                            setTickCount(c => c + 1);
+                            setLastUpdate(timestamp);
                         });
-
-                        setRequestCount(prev => prev + 1);
-                        setLastUpdate(new Date().toLocaleTimeString('es-ES'));
                     }
+                });
 
-                    if (i < PAIRS.length - 1) await sleep(REQUEST_DELAY);
-                }
+                socket.addEventListener('close', () => {
+                    console.log('❌ WebSocket desconectado');
+                    setConnected(false);
+                });
 
-                loadingRef.current = false;
-            };
+                socket.addEventListener('error', (error) => {
+                    console.error('⚠️ Error WebSocket:', error);
+                });
 
-            useEffect(() => {
-                loadAllPairs();
-                const interval = setInterval(() => {
-                    if (!isPaused) loadAllPairs();
-                }, REFRESH_CYCLE);
-                return () => clearInterval(interval);
-            }, [isPaused]);
+                // Cleanup al desmontar
+                return () => {
+                    console.log('🔌 Cerrando WebSocket');
+                    PAIRS.forEach(pair => {
+                        socket.send(JSON.stringify({ type: 'unsubscribe', symbol: pair.symbol }));
+                    });
+                    socket.close();
+                };
+            }, []); // Solo se ejecuta UNA VEZ al montar - NO hay re-renders innecesarios
 
             const bestPair = pairs.filter(p => p.price).reduce((best, curr) => 
-                calculateOpportunityScore(curr) > calculateOpportunityScore(best) ? curr : best
+                curr.score > best.score ? curr : best
             , pairs[0] || {});
 
             return (
                 <div>
-                    <Header lastUpdate={lastUpdate} requestCount={requestCount} />
+                    <Header connected={connected} tickCount={tickCount} lastUpdate={lastUpdate} />
 
                     <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
                         <div style={{ marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>MERCADOS PRINCIPALES</h2>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING EN TIEMPO REAL</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                🎯 Análisis técnico completo con RSI, MACD, Bollinger Bands • Probabilidades de éxito por ratio • Señales automatizadas
+                                🔴 Auto-refresh activado • Sin delays • WebSocket Finnhub • RSI, MACD, Bollinger en vivo
                             </p>
                         </div>
 
@@ -1003,8 +852,7 @@
                                     key={pair.symbol}
                                     pair={pair}
                                     onAnalyze={setSelectedPair}
-                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && !pair.isLoading}
-                                    isLoading={pair.isLoading}
+                                    isBestOpportunity={bestPair && pair.displaySymbol === bestPair.displaySymbol && pair.price}
                                 />
                             ))}
                         </div>
