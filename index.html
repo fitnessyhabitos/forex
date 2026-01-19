@@ -284,6 +284,7 @@
 
         const FINNHUB_API_KEY = 'd5n740hr01qh5ppc15r0d5n740hr01qh5ppc15rg';
         const FINNHUB_WS = 'wss://ws.finnhub.io';
+        const FINNHUB_REST = 'https://finnhub.io/api/v1';
 
         const PAIRS = [
             { symbol: 'OANDA:EUR_USD', displaySymbol: 'EURUSD', name: 'Euro / US Dollar', decimals: 5 },
@@ -430,6 +431,29 @@
             ];
         };
 
+        // Obtener precio de apertura del día vía REST API
+        const fetchQuote = async (symbol) => {
+            try {
+                const url = `${FINNHUB_REST}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.o) {
+                    return {
+                        open: data.o,
+                        high: data.h,
+                        low: data.l,
+                        current: data.c,
+                        previousClose: data.pc
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Error fetching quote:', error);
+                return null;
+            }
+        };
+
         // ==================== COMPONENTES ====================
 
         const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
@@ -459,7 +483,7 @@
         );
 
         const PairCard = ({ pair, onAnalyze, isBestOpportunity }) => {
-            const { displaySymbol, name, price, open, decimals } = pair;
+            const { displaySymbol, name, price, open, high, low, decimals } = pair;
 
             if (!price) {
                 return (
@@ -472,8 +496,9 @@
                 );
             }
 
-            const change = open ? ((price - open) / open * 100).toFixed(2) : '0.00';
-            const changeColor = change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
+            const change = open && open > 0 ? ((price - open) / open * 100).toFixed(2) : '0.00';
+            const changeAbs = open && open > 0 ? (price - open).toFixed(decimals) : '0.00';
+            const changeColor = parseFloat(change) >= 0 ? 'var(--neon-green)' : 'var(--neon-red)';
             const score = pair.score || 0;
 
             return (
@@ -490,15 +515,29 @@
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>🔴 PRECIO EN VIVO</p>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-gray)', marginBottom: '0.25rem' }}>🔴 PRECIO EN VIVO</p>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             <p className="price-change" style={{ fontSize: '1.75rem', fontWeight: '700', fontFamily: 'Orbitron' }}>
                                 {price.toFixed(decimals)}
                             </p>
-                            <p style={{ fontSize: '1rem', fontWeight: '700', color: changeColor }}>
-                                {change >= 0 ? '+' : ''}{change}%
-                            </p>
                         </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: changeColor, fontWeight: '700' }}>
+                                <span>{parseFloat(change) >= 0 ? '▲' : '▼'}</span>
+                                <span>{changeAbs}</span>
+                            </div>
+                            <div style={{ padding: '0.25rem 0.5rem', background: changeColor, color: 'var(--dark-bg)', fontWeight: '900', fontSize: '0.75rem', fontFamily: 'Orbitron' }}>
+                                {parseFloat(change) >= 0 ? '+' : ''}{change}%
+                            </div>
+                        </div>
+
+                        {open && open > 0 && (
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', marginTop: '0.5rem' }}>
+                                Apertura: {open.toFixed(decimals)} • Alto: {high ? high.toFixed(decimals) : '--'} • Bajo: {low ? low.toFixed(decimals) : '--'}
+                            </div>
+                        )}
+
                         <p style={{ fontSize: '0.65rem', color: 'var(--neon-cyan)', marginTop: '0.25rem' }}>
                             ⚡ Auto-refresh • Streaming
                         </p>
@@ -733,7 +772,7 @@
         // ==================== APP PRINCIPAL ====================
 
         const App = () => {
-            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, open: null, volatility: 50, score: 0 })));
+            const [pairs, setPairs] = useState(PAIRS.map(p => ({ ...p, price: null, open: null, high: null, low: null, volatility: 50, score: 0 })));
             const [priceHistories, setPriceHistories] = useState({});
             const [selectedPair, setSelectedPair] = useState(null);
             const [connected, setConnected] = useState(false);
@@ -741,24 +780,42 @@
             const [lastUpdate, setLastUpdate] = useState('--:--:--');
             const wsRef = useRef(null);
 
-            // ========== WEBSOCKET - SIN DELAYS - AUTO REFRESH ==========
+            // Cargar datos iniciales (open, high, low) via REST API
             useEffect(() => {
-                console.log('🚀 Iniciando WebSocket - SIN delays - Auto-refresh activado');
+                const loadInitialData = async () => {
+                    console.log('📊 Cargando datos iniciales de apertura...');
+                    for (const pairConfig of PAIRS) {
+                        const quote = await fetchQuote(pairConfig.symbol);
+                        if (quote) {
+                            setPairs(prev => prev.map(p => 
+                                p.symbol === pairConfig.symbol 
+                                    ? { ...p, open: quote.open, high: quote.high, low: quote.low, price: quote.current }
+                                    : p
+                            ));
+                            console.log(`✅ ${pairConfig.displaySymbol}: Open=${quote.open}, Current=${quote.current}`);
+                        }
+                    }
+                };
+
+                loadInitialData();
+            }, []);
+
+            // WebSocket para actualizaciones en tiempo real
+            useEffect(() => {
+                console.log('🚀 Iniciando WebSocket streaming');
                 const socket = new WebSocket(`${FINNHUB_WS}?token=${FINNHUB_API_KEY}`);
                 wsRef.current = socket;
 
                 socket.addEventListener('open', () => {
-                    console.log('✅ WebSocket CONECTADO - Comenzando streaming automático');
+                    console.log('✅ WebSocket CONECTADO');
                     setConnected(true);
 
-                    // Suscripción INMEDIATA a todos los pares
                     PAIRS.forEach(pair => {
                         socket.send(JSON.stringify({ type: 'subscribe', symbol: pair.symbol }));
-                        console.log('📡 Stream activado para:', pair.symbol);
+                        console.log('📡 Streaming:', pair.symbol);
                     });
                 });
 
-                // Auto-refresh: Procesar CADA mensaje que llega
                 socket.addEventListener('message', (event) => {
                     const data = JSON.parse(event.data);
 
@@ -770,19 +827,18 @@
                             const price = trade.p;
                             const timestamp = new Date(trade.t).toLocaleTimeString('es-ES');
 
-                            // Actualización INMEDIATA de precios
                             setPairs(prev => prev.map(p => {
                                 if (p.symbol === pairConfig.symbol) {
-                                    const newOpen = p.open || price;
+                                    // Actualizar high/low en tiempo real
+                                    const newHigh = p.high ? Math.max(p.high, price) : price;
+                                    const newLow = p.low ? Math.min(p.low, price) : price;
 
-                                    // Calcular volatilidad en tiempo real
                                     const currentHistory = priceHistories[p.displaySymbol] || [];
                                     const recentPrices = currentHistory.slice(-50);
                                     const volatility = recentPrices.length > 10 
                                         ? Math.round(((Math.max(...recentPrices) - Math.min(...recentPrices)) / price) * 10000)
                                         : 50;
 
-                                    // Score en tiempo real
                                     const allPrices = [...currentHistory, price];
                                     const ma50 = calculateMA(allPrices, Math.min(50, allPrices.length));
                                     const ma200 = calculateMA(allPrices, Math.min(200, allPrices.length));
@@ -793,15 +849,14 @@
                                     score += volatility >= 40 && volatility <= 80 ? 20 : 10;
                                     if ((price > ma50 && ma50 > ma200) || (price < ma50 && ma50 < ma200)) score += 10;
 
-                                    return { ...p, price, open: newOpen, volatility, score: Math.min(100, Math.round(score)) };
+                                    return { ...p, price, high: newHigh, low: newLow, volatility, score: Math.min(100, Math.round(score)) };
                                 }
                                 return p;
                             }));
 
-                            // Actualizar historial AUTOMÁTICAMENTE
                             setPriceHistories(prev => {
                                 const history = [...(prev[pairConfig.displaySymbol] || []), price];
-                                if (history.length > 200) history.shift(); // Mantener últimos 200
+                                if (history.length > 200) history.shift();
                                 return { ...prev, [pairConfig.displaySymbol]: history };
                             });
 
@@ -820,7 +875,6 @@
                     console.error('⚠️ Error WebSocket:', error);
                 });
 
-                // Cleanup al desmontar
                 return () => {
                     console.log('🔌 Cerrando WebSocket');
                     PAIRS.forEach(pair => {
@@ -828,7 +882,7 @@
                     });
                     socket.close();
                 };
-            }, []); // Solo se ejecuta UNA VEZ al montar - NO hay re-renders innecesarios
+            }, []);
 
             const bestPair = pairs.filter(p => p.price).reduce((best, curr) => 
                 curr.score > best.score ? curr : best
@@ -842,7 +896,7 @@
                         <div style={{ marginBottom: '2rem' }}>
                             <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡ STREAMING EN TIEMPO REAL</h2>
                             <p style={{ color: 'var(--text-gray)', fontSize: '0.875rem' }}>
-                                🔴 Auto-refresh activado • Sin delays • WebSocket Finnhub • RSI, MACD, Bollinger en vivo
+                                🔴 % desde apertura • Alto/Bajo del día • WebSocket Finnhub • RSI, MACD, Bollinger en vivo
                             </p>
                         </div>
 
